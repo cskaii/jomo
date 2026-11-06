@@ -1,0 +1,18 @@
+{
+  "image": "evil-duck-idle-spritesheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "columns": 4,
+  "rows": 2,
+  "loop": true,
+  "frameDurationsMs": [
+    650,
+    180,
+    250,
+    150,
+    150,
+    250,
+    180,
+    350
+  ]
+}

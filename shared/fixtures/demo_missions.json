@@ -1,0 +1,52 @@
+[
+  {
+    "id": "m1",
+    "title": "Sunset Nature Walk",
+    "description": "Take a 30-minute relaxed stroll outside without checking your phone.",
+    "category": "outdoor",
+    "duration_minutes": 30,
+    "proof_requirement": "photo_or_group_confirmation",
+    "max_reward_points": 30,
+    "tags": ["nature", "solo", "group", "calm"]
+  },
+  {
+    "id": "m2",
+    "title": "Board Game Night",
+    "description": "Gather friends or family for an offline tabletop or card game session.",
+    "category": "social",
+    "duration_minutes": 60,
+    "proof_requirement": "group_confirmation",
+    "max_reward_points": 60,
+    "tags": ["friends", "fun", "social"]
+  },
+  {
+    "id": "m3",
+    "title": "Mindful Book Reading",
+    "description": "Read a physical book or magazine for 45 minutes uninterrupted.",
+    "category": "creative",
+    "duration_minutes": 45,
+    "proof_requirement": "photo",
+    "max_reward_points": 45,
+    "tags": ["focus", "learning", "solo"]
+  },
+  {
+    "id": "m4",
+    "title": "Digital Detox Coffee Chat",
+    "description": "Catch up with a friend over coffee or tea with devices put away in bags.",
+    "category": "social",
+    "duration_minutes": 45,
+    "proof_requirement": "group_confirmation",
+    "max_reward_points": 45,
+    "tags": ["social", "food", "mindful"]
+  },
+  {
+    "id": "m5",
+    "title": "Sketch or Journaling Session",
+    "description": "Draw, sketch, or write your thoughts on pen and paper for 30 minutes.",
+    "category": "creative",
+    "duration_minutes": 30,
+    "proof_requirement": "photo",
+    "max_reward_points": 30,
+    "tags": ["art", "creative", "solo"]
+  }
+]

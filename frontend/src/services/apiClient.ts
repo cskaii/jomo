@@ -1,0 +1,60 @@
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { ErrorEnvelope } from "@/types/api";
+import { accessToken, clearSession } from "./authSession";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
+
+export const apiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 15000,
+});
+
+apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  if (typeof window !== "undefined") {
+    if (["/auth/login", "/auth/register", "/auth/recover", "/auth/refresh", "/auth/dev-session"].includes(config.url || "") || config.headers.Authorization) return config;
+    const token = await accessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ErrorEnvelope>) => {
+    const config = error.config as (InternalAxiosRequestConfig & { _jomoRetried?: boolean }) | undefined;
+    if (error.response?.status === 401 && config && !config._jomoRetried && !config.url?.startsWith("/auth/")) {
+      config._jomoRetried = true;
+      try {
+        const token = await accessToken(true);
+        if (token) { config.headers.Authorization = `Bearer ${token}`; return apiClient.request(config); }
+      } catch { /* Return the safe request error below. */ }
+    }
+    if (error.response?.status === 401 && !config?.url?.startsWith("/auth/") && typeof window !== "undefined") {
+      clearSession();
+      window.dispatchEvent(new Event("jomo:session-expired"));
+    }
+    if (error.response?.data?.error) {
+      // Backend structured error envelope
+      return Promise.reject({
+        ...error.response.data.error,
+        status: error.response.status,
+        request_id: error.response.data.request_id,
+      });
+    }
+    const status = error.response?.status;
+    return Promise.reject({
+      code: status ? "HTTP_ERROR" : "NETWORK_ERROR",
+      message: !status || status === 502 || status === 503 || status === 504
+        ? "JOMO cannot reach its backend. Please retry shortly or contact the team."
+        : `The backend request failed (HTTP ${status}). Please retry.`,
+      status,
+      details: null,
+    });
+  },
+);

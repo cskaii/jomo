@@ -1,0 +1,62 @@
+[
+  {
+    "date": "2026-11-01",
+    "total_minutes": 285,
+    "social_minutes": 140,
+    "category_breakdown": {
+      "social": 140,
+      "entertainment": 85,
+      "productivity": 40,
+      "other": 20
+    },
+    "source": "demo"
+  },
+  {
+    "date": "2026-11-02",
+    "total_minutes": 310,
+    "social_minutes": 160,
+    "category_breakdown": {
+      "social": 160,
+      "entertainment": 90,
+      "productivity": 35,
+      "other": 25
+    },
+    "source": "demo"
+  },
+  {
+    "date": "2026-11-03",
+    "total_minutes": 220,
+    "social_minutes": 95,
+    "category_breakdown": {
+      "social": 95,
+      "entertainment": 65,
+      "productivity": 45,
+      "other": 15
+    },
+    "source": "demo"
+  },
+  {
+    "date": "2026-11-04",
+    "total_minutes": 260,
+    "social_minutes": 120,
+    "category_breakdown": {
+      "social": 120,
+      "entertainment": 80,
+      "productivity": 40,
+      "other": 20
+    },
+    "source": "demo"
+  },
+  {
+    "date": "2026-11-05",
+    "total_minutes": 190,
+    "social_minutes": 75,
+    "category_breakdown": {
+      "social": 75,
+      "entertainment": 50,
+      "productivity": 50,
+      "other": 15
+    },
+    "source": "demo"
+  }
+]
