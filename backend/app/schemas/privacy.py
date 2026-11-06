@@ -39,6 +39,20 @@ class WellbeingRecommendationRequest(BaseModel):
     target_date: Optional[str] = None
 
 
+class FileScreeningResponse(BaseModel):
+    status: Literal["completed"]
+    engine: Literal["presidio-image-redactor", "presidio-structured"]
+    format: Literal["image", "csv", "json"]
+    ner_enabled: bool
+    flagged_fields: int
+    detected_categories: List[str]
+    limitations: List[str]
+    media_type: str
+    filename: str
+    content: Optional[str] = None
+    content_base64: Optional[str] = None
+
+
 class WellbeingRecommendationResponse(BaseModel):
     headline: str
     suggestion: str

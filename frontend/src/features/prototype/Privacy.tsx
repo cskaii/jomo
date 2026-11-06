@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { request, screening, z } from "@/services/prototype";
 import { useAction, Feedback, Panel, Heading, Submit } from "./ui";
 import { startEvilDuckGame } from "@/features/privacy-game/EvilDuckGame";
+import FileScreening from "./FileScreening";
 export default function Privacy() {
   const [text, setText] = useState(""),
     [consent, setConsent] = useState(false),
@@ -16,7 +17,7 @@ export default function Privacy() {
         title="Keep personal things personal."
       >
         <p>
-          Check text you choose to submit for possible sensitive information.
+          Check text, images, or data files you choose to submit for possible sensitive information.
         </p>
       </Heading>
       <Panel title="You decide what gets checked">
@@ -42,6 +43,8 @@ export default function Privacy() {
         <p>Four quick, fictional challenges about location clues, oversharing, impersonation, and screenshots. A wrong choice shows how a careless share can spoil a practice garden and how to handle it safely.</p>
         <button className="j-button" type="button" onClick={startEvilDuckGame}>Play a privacy challenge</button>
       </Panel>
+      <FileScreening kind="image" />
+      <FileScreening kind="structured" />
       <Panel>
         <form
           className="j-form"

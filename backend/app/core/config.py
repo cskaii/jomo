@@ -30,12 +30,14 @@ class Settings(BaseSettings):
     STORAGE_BUCKET: str = "activity-proofs"
 
     CORS_ORIGINS: Union[str, List[str]] = "http://localhost:3000,http://127.0.0.1:3000"
-    REQUEST_MAX_BODY_BYTES: int = Field(default=1024 * 1024, ge=1)
+    REQUEST_MAX_BODY_BYTES: int = Field(default=3 * 1024 * 1024, ge=1)
     RATE_LIMIT_IP_PER_MINUTE: int = Field(default=600, ge=1)
     RATE_LIMIT_USER_PER_MINUTE: int = Field(default=120, ge=1)
 
     SCREENING_MAX_TEXT_LENGTH: int = Field(default=10000, ge=1, le=10000)
     SCREENING_STORE_RAW_TEXT: bool = False
+    SCREENING_UPLOAD_MAX_BYTES: int = Field(default=2 * 1024 * 1024, ge=1, le=2 * 1024 * 1024)
+    SCREENING_IMAGE_MAX_PIXELS: int = Field(default=4000000, ge=1, le=4000000)
 
     LOCATION_RETENTION_HOURS: int = 24
 
