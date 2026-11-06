@@ -30,7 +30,7 @@ def setup_middleware(app: FastAPI, cors_origins=None, max_requests_per_minute=12
     app.add_middleware(SafeExceptionMiddleware)
     app.add_middleware(ApiCORSMiddleware, allow_origins=origins, allow_credentials=True,
                        allow_methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-                       allow_headers=["Authorization", "Content-Type", "X-Request-Id", "X-Dev-User-Id"],
+                       allow_headers=["Authorization", "Content-Type", "X-Request-Id", "X-Dev-User-Id", "X-Screening-Consent"],
                        expose_headers=["X-Request-Id", "Retry-After", "WWW-Authenticate"])
     app.add_middleware(AuditMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)

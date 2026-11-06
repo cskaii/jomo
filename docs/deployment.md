@@ -23,27 +23,28 @@ Under Supabase Authentication, enable the Email provider. Set the Site URL to th
 
 - `http://localhost:3000/login`
 - `http://localhost:3000/reset-password`
-- `<VERCEL_PRODUCTION_URL>/login`
-- `<VERCEL_PRODUCTION_URL>/reset-password`
+- `https://jomo-xi.vercel.app/login`
+- `https://jomo-xi.vercel.app/reset-password`
 
 Keep email confirmation enabled if you want confirmation before sign-in. No user account is pre-created.
 
 ## 2. Render backend
 
-Connect this Git repository and use its `render.yaml` Blueprint, or create a Python Web Service with:
+Connect this Git repository and use its `render.yaml` Blueprint, or switch the existing service to Docker. Tesseract OCR is installed by `backend/Dockerfile`. Use these settings (paths are relative to the selected root directory):
 
 | Setting | Value |
 |---|---|
 | Root directory | `backend` |
-| Build command | `pip install -r requirements.txt && python -m spacy download en_core_web_sm` |
-| Start command | `python -m app.db.setup && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Runtime | `Docker` |
+| Dockerfile path | `Dockerfile` |
+| Docker build context | `.` |
+| Docker Command | Leave empty; the Dockerfile starts the service |
 | Health-check path | `/api/health` |
 
 Enter the following environment variables:
 
 | Variable | Exact value or source |
 |---|---|
-| `PYTHON_VERSION` | `3.12.14` |
 | `APP_ENV` | `production` |
 | `DATABASE_URL` | Copy the complete `DATABASE_URL` value from your private `backend/.env`; it already has the correct driver, supplied password, pooler and SSL parameters. |
 | `AUTH_PROVIDER` | `supabase` |
@@ -54,8 +55,9 @@ Enter the following environment variables:
 | `AUTO_SEED_CATALOG` | `false` |
 | `AI_PRESIDIO_ENABLED` | `true` |
 | `AI_SPACY_MODEL` | `en_core_web_sm` |
-| `FRONTEND_URL` | Your final Vercel production origin, including `https://`, with no trailing slash. |
-| `CORS_ORIGINS` | The same exact Vercel production origin. For several origins, use a comma-separated list. |
+| `REQUEST_MAX_BODY_BYTES` | `3145728` |
+| `FRONTEND_URL` | `https://jomo-xi.vercel.app` |
+| `CORS_ORIGINS` | `https://jomo-xi.vercel.app` |
 
 Render supplies `PORT`; do not hard-code it. No service-role key or JWT signing secret is required: the backend verifies sessions with Supabase Auth's `/user` endpoint. The session pooler is also used for migrations; do not change its port to `6543`.
 
@@ -86,7 +88,7 @@ Once the Vercel URL is known, update `FRONTEND_URL`, `CORS_ORIGINS` and Supabase
 
 ## Scope
 
-This prototype does not include real photo upload storage, native device/app blocking or background surveillance. Personal activities do not require photos; group activities support peer confirmation. Privacy screening uses Microsoft Presidio Analyzer and Anonymizer only. The Render build installs its small English spaCy model. If the model is absent, Presidio reports pattern-only operation; if Presidio itself fails or is disabled, screening returns HTTP 503 with no substitute detector. Text is processed within the backend and is not retained. Existing Render services must update their Build Command and AI environment variables explicitly; committing render.yaml only updates Blueprint-managed services after a sync.
+This prototype does not include real photo upload storage, native device/app blocking or background surveillance. Personal activities do not require photos; group activities support peer confirmation. Privacy screening uses Microsoft Presidio Analyzer, Anonymizer, Image Redactor and Structured. The Docker image installs its small English spaCy model and Tesseract OCR for images. If the model is absent, Presidio reports pattern-only operation; if Presidio itself fails or is disabled, screening returns HTTP 503 with no substitute detector. Text is processed within the backend and is not retained. Existing Render services must switch to the Docker runtime and update their file-limit/AI environment variables explicitly; committing render.yaml only updates Blueprint-managed services after a sync.
 
 All database credentials stay in ignored environment files or hosting environment settings. The earlier example Supabase project and its keys were removed from active configuration.
 
@@ -96,3 +98,5 @@ References: https://render.com/docs/deploy-fastapi, https://vercel.com/docs/mono
 
 If Supabase network restrictions are already enabled, its database allowlist must include Render ranges `74.220.48.0/24` and `74.220.56.0/24` alongside any existing required ranges. These are shared egress ranges, not environment variables. They do not need to be added when no IP restrictions are enabled. No network restrictions were changed by this update.
 
+
+See `docs/privacy-file-screening.md` for file limits, supported formats and verification. File screening needs no new Supabase table, bucket or model.

@@ -1,14 +1,12 @@
 services:
   - type: web
     name: jomo-backend
-    runtime: python
+    runtime: docker
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
-    startCommand: python -m app.db.setup && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.14
       - key: APP_ENV
         value: production
       - key: DEV_AUTH_ENABLED
@@ -19,6 +17,8 @@ services:
         value: "true"
       - key: AI_SPACY_MODEL
         value: en_core_web_sm
+      - key: REQUEST_MAX_BODY_BYTES
+        value: "3145728"
       - key: DATABASE_URL
         sync: false
       - key: AUTH_PROVIDER

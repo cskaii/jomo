@@ -62,6 +62,8 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "STORAGE_NOT_CONFIGURED": "Photo uploads are not available yet.",
                 "RATE_LIMIT_UNAVAILABLE": "Request limiting is temporarily unavailable.",
                 "SCREENING_UNAVAILABLE": "Microsoft Presidio is temporarily unavailable. Please retry.",
+                "OCR_UNAVAILABLE": "Image screening is unavailable. Check the Presidio and Tesseract installation, then retry.",
+                "STRUCTURED_UNAVAILABLE": "Structured screening is temporarily unavailable. Please retry.",
             }
             code = exc.detail.get("code") if isinstance(exc.detail, dict) else None
             if code in safe_messages:

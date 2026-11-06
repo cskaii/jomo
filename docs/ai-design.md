@@ -13,7 +13,7 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-Set `AI_PRESIDIO_ENABLED=true` and `AI_SPACY_MODEL=en_core_web_sm`, then restart the backend. On Render, the Build Command must include both installation commands joined with `&&`. Existing dashboard services need this setting updated explicitly.
+Set `AI_PRESIDIO_ENABLED=true` and `AI_SPACY_MODEL=en_core_web_sm`, then restart the backend. On Render, select the Docker runtime and use `backend/Dockerfile`; it installs the Python packages, Tesseract OCR and the English model. See `docs/privacy-file-screening.md` for exact dashboard settings.
 
 ## Request handling
 
@@ -30,3 +30,7 @@ Original text and detection values are not stored or logged. Audit events contai
 ## Tests
 
 `python -m pytest -q` exercises real Presidio detection and anonymization, offline email checks, unavailable-engine behavior, input privacy, authorization and request limits. Named-entity tests require the selected spaCy model. A scan without detections never establishes that text is safe.
+
+## Images and structured files
+
+Privacy Guardian also exposes Presidio Image Redactor for PNG/JPEG images and Presidio Structured for UTF-8 CSV/JSON. Both share the same configured text analyzer and Singapore recognisers. Authenticated uploads require explicit per-request consent. Original images and data files are not retained in Supabase; only category names are audited. The OCR wrapper may create temporary processing files in the container. See `docs/privacy-file-screening.md` for limits and deployment details.
