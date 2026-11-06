@@ -1,0 +1,47 @@
+{
+  "image": "duck-walk.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "columns": 4,
+  "rows": 4,
+  "frameDurationMs": 150,
+  "loop": true,
+  "animations": {
+    "down": {
+      "row": 0,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "up": {
+      "row": 1,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "left": {
+      "row": 2,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "right": {
+      "row": 3,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

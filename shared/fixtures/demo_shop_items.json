@@ -1,0 +1,47 @@
+[
+  {
+    "id": "item-sunflower-seed",
+    "name": "Sunflower Seed",
+    "description": "A sunny seed that blooms into a vibrant, mood-lifting golden flower.",
+    "item_type": "seed",
+    "price_points": 25,
+    "asset_key": "plant_sunflower",
+    "is_active": true
+  },
+  {
+    "id": "item-bonsai-tree",
+    "name": "Zen Bonsai",
+    "description": "An elegant miniature bonsai tree signifying mindfulness and patience.",
+    "item_type": "plant",
+    "price_points": 60,
+    "asset_key": "plant_bonsai",
+    "is_active": true
+  },
+  {
+    "id": "item-stone-bench",
+    "name": "Cozy Stone Bench",
+    "description": "A quiet garden bench where virtual visitors can sit and relax.",
+    "item_type": "decoration",
+    "price_points": 40,
+    "asset_key": "decor_bench",
+    "is_active": true
+  },
+  {
+    "id": "item-garden-cat",
+    "name": "Sleeping Calico Cat",
+    "description": "A friendly cat who enjoys curling up in the warm sunlight of your garden.",
+    "item_type": "pet",
+    "price_points": 100,
+    "asset_key": "pet_calico_cat",
+    "is_active": true
+  },
+  {
+    "id": "item-fountain",
+    "name": "Tranquil Bird Bath",
+    "description": "A serene stone water fountain that attracts fluttering garden birds.",
+    "item_type": "decoration",
+    "price_points": 80,
+    "asset_key": "decor_fountain",
+    "is_active": true
+  }
+]

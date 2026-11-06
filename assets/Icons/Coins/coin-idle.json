@@ -1,0 +1,58 @@
+{
+  "image": "coin-idle-spritesheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "columns": 4,
+  "rows": 2,
+  "loop": true,
+  "frames": [
+    {
+      "index": 0,
+      "x": 0,
+      "y": 0,
+      "durationMs": 110
+    },
+    {
+      "index": 1,
+      "x": 256,
+      "y": 0,
+      "durationMs": 110
+    },
+    {
+      "index": 2,
+      "x": 512,
+      "y": 0,
+      "durationMs": 110
+    },
+    {
+      "index": 3,
+      "x": 768,
+      "y": 0,
+      "durationMs": 110
+    },
+    {
+      "index": 4,
+      "x": 0,
+      "y": 256,
+      "durationMs": 110
+    },
+    {
+      "index": 5,
+      "x": 256,
+      "y": 256,
+      "durationMs": 110
+    },
+    {
+      "index": 6,
+      "x": 512,
+      "y": 256,
+      "durationMs": 110
+    },
+    {
+      "index": 7,
+      "x": 768,
+      "y": 256,
+      "durationMs": 110
+    }
+  ]
+}

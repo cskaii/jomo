@@ -1,0 +1,58 @@
+{
+  "image": "cat-idle-spritesheet.png",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "columns": 4,
+  "rows": 2,
+  "loop": true,
+  "frames": [
+    {
+      "index": 0,
+      "x": 0,
+      "y": 0,
+      "durationMs": 700
+    },
+    {
+      "index": 1,
+      "x": 256,
+      "y": 0,
+      "durationMs": 160
+    },
+    {
+      "index": 2,
+      "x": 512,
+      "y": 0,
+      "durationMs": 100
+    },
+    {
+      "index": 3,
+      "x": 768,
+      "y": 0,
+      "durationMs": 170
+    },
+    {
+      "index": 4,
+      "x": 0,
+      "y": 256,
+      "durationMs": 100
+    },
+    {
+      "index": 5,
+      "x": 256,
+      "y": 256,
+      "durationMs": 160
+    },
+    {
+      "index": 6,
+      "x": 512,
+      "y": 256,
+      "durationMs": 180
+    },
+    {
+      "index": 7,
+      "x": 768,
+      "y": 256,
+      "durationMs": 400
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#c0c9aa"/><stop offset=".5" stop-color="#a7b28b"/><stop offset="1" stop-color="#657a57"/></linearGradient>
+    <radialGradient id="light"><stop stop-color="#f8edb8" stop-opacity=".9"/><stop offset="1" stop-color="#e1e4b9" stop-opacity="0"/></radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".11"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+    <g id="fern" fill="none" stroke="#536c46" stroke-linecap="round"><path d="M0 180Q-8 80 35-60" stroke-width="5"/><g fill="#688258" stroke="none"><ellipse cx="8" cy="105" rx="42" ry="12" transform="rotate(34 8 105)"/><ellipse cx="35" cy="87" rx="43" ry="12" transform="rotate(-34 35 87)"/><ellipse cx="14" cy="56" rx="37" ry="11" transform="rotate(34 14 56)"/><ellipse cx="47" cy="36" rx="36" ry="11" transform="rotate(-34 47 36)"/><ellipse cx="21" cy="9" rx="30" ry="10" transform="rotate(34 21 9)"/><ellipse cx="51" cy="-15" rx="28" ry="9" transform="rotate(-34 51 -15)"/></g></g>
+  </defs>
+  <g filter="url(#paper)"><rect width="1600" height="1100" fill="url(#sky)"/>
+  <g opacity=".25" filter="url(#soft)" stroke="#4c6743" fill="none"><path d="M120 1100Q80 640 210-80M1360 1100Q1430 580 1340-60M320 1000Q410 540 355-70M1500 1000L1560-20" stroke-width="33"/><path d="M130 310L-50 90M160 180L390-20M1400 310L1600 70M1370 180L1120-20" stroke-width="18"/></g>
+  <circle cx="850" cy="280" r="570" fill="url(#light)"/>
+  <g opacity=".18"><use href="#fern" transform="translate(80 260) scale(1.8) rotate(-20)"/><use href="#fern" transform="translate(1400 220) scale(2.4) rotate(15)"/><use href="#fern" transform="translate(1020 120) scale(1.4) rotate(35)"/></g>
+  <g opacity=".32"><use href="#fern" transform="translate(40 810) scale(2.2) rotate(-20)"/><use href="#fern" transform="translate(1480 820) scale(2.5) rotate(20)"/><use href="#fern" transform="translate(250 1080) scale(2.4) rotate(-10)"/><use href="#fern" transform="translate(1180 1080) scale(2.2) rotate(20)"/></g>
+  <path d="M0 1020Q250 880 480 1015T980 990T1600 1010V1100H0Z" fill="#506847" opacity=".22"/>
+  </g>
+</svg>
