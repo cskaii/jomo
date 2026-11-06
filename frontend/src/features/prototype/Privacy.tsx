@@ -126,6 +126,9 @@ export default function Privacy() {
             Screening status: {result.status}. Automated screening can miss
             sensitive information.
           </p>
+          <p>Screening engine: {result.engine === "presidio"
+            ? `Microsoft Presidio (${result.ner_enabled ? "language model and pattern detection" : "pattern detection"})`
+            : "Personal information check was not requested"}.</p>
           {result.detections.length > 0 && (
             <div className="j-table-wrap">
               <table>

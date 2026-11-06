@@ -8,7 +8,7 @@ The rebuilt application includes Supabase email/password authentication, profile
 
 Fresh setup creates **30 empty application tables**. No sample accounts, shop items, quests, missions or transactions are inserted. Catalogue auto-seeding is disabled. Users and their personal gardens are created only when someone signs in and opens their account. Activities can be created from the Activities page even when the quest catalogue is empty.
 
-Photo storage is not implemented in this prototype. Personal activities use the existing no-photo completion flow; group activities can use peer confirmation. Optional Presidio screening is separate from the lightweight built-in regex screening.
+Photo storage is not implemented in this prototype. Personal activities use the existing no-photo completion flow; group activities can use peer confirmation. Text screening uses Microsoft Presidio Analyzer and Anonymizer exclusively. If Presidio is unavailable, the API reports an error instead of switching engines.
 
 ## Run locally
 
@@ -52,6 +52,6 @@ npm run lint
 npm run build
 ```
 
-The backend tests use disposable databases and mocked Supabase responses. Optional Presidio tests require `requirements-ai.txt` and `AI_PRESIDIO_ENABLED=true`; normal operation uses regex screening. The tests do not prove that a remote Supabase project or hosting deployment is reachable.
+The backend tests use disposable databases, mocked Supabase responses and the real Presidio Analyzer/Anonymizer. Install the English model with `python -m spacy download en_core_web_sm` to test named-entity recognition as well. Without a model Presidio can still run its pattern recognisers and reports that limitation. Tests do not prove that a remote project or deployment is reachable.
 
 To regenerate the schema without contacting a database, run `python scripts/export-schema.py` from the repository root with backend dependencies installed.

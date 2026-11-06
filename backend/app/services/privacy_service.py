@@ -1,9 +1,9 @@
-import re
 import json
 from pathlib import Path
 from typing import List, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.schemas.privacy import (
     ScreenTextRequest,
@@ -16,15 +16,9 @@ from app.schemas.privacy import (
 )
 from app.models.screening import ScreeningEvent
 from app.services.usage_service import UsageService
-from app.ai.screening_service import get_screening_provider
+from app.ai.screening_service import get_screening_provider, DEFAULT_LIMITATIONS
+from app.core.logging import logger
 from app.core.config import get_settings
-
-# Singapore specific and standard PII regex patterns (Section 10)
-EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-SG_PHONE_PATTERN = re.compile(r"(?:\+65\s?)?[89]\d{3}[-\s]?\d{4}\b")
-SG_NRIC_PATTERN = re.compile(r"\b[STFGMstfgm]\d{7}[A-Za-z]\b")
-CREDIT_CARD_PATTERN = re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b")
-
 
 class PrivacyService:
     def __init__(self, db: Session):
@@ -37,28 +31,32 @@ class PrivacyService:
         detections: List[DetectionItem] = []
         redacted = text
         has_pii = False
+        engine = "none"
+        ner_enabled = False
+        limitations = list(DEFAULT_LIMITATIONS)
 
         if do_pii:
-            # Prefer Presidio; fall back to deterministic regex recognisers when
-            # Presidio is disabled or fails to initialise (blueprint §0.2).
             provider = get_screening_provider()
-            if provider is not None:
+            if provider is None:
+                raise HTTPException(503, detail={
+                    "code": "SCREENING_UNAVAILABLE",
+                    "message": "Microsoft Presidio is unavailable. Please try again later.",
+                })
+            try:
                 result = provider.screen(text, data.language)
-                detections = [
-                    DetectionItem(
-                        entity_type=d["entity_type"],
-                        start=d["start"],
-                        end=d["end"],
-                        score=d["score"],
-                        category=d["category"],
-                    )
-                    for d in result["detections"]
-                ]
-                redacted = result["redacted_text"]
-                has_pii = result["has_potential_pii"]
-            else:
-                detections, redacted = self._regex_pii_detections(text)
-                has_pii = len(detections) > 0
+            except Exception as exc:
+                # Detector errors can contain submitted text; never log their message.
+                logger.warning("Presidio scan failed (%s).", type(exc).__name__)
+                raise HTTPException(503, detail={
+                    "code": "SCREENING_UNAVAILABLE",
+                    "message": "Microsoft Presidio could not complete this scan. Please retry.",
+                }) from None
+            engine = "presidio"
+            ner_enabled = bool(result.get("ner_enabled", False))
+            limitations = result["limitations"]
+            detections = [DetectionItem(**d) for d in result["detections"]]
+            redacted = result["redacted_text"]
+            has_pii = result["has_potential_pii"]
 
         categories_found = {d.entity_type for d in detections}
 
@@ -73,11 +71,6 @@ class PrivacyService:
         self.db.add(audit_event)
         self.db.commit()
 
-        limitations = [
-            "Automated screening can miss sensitive information.",
-            "A result with no detections does not guarantee that text is safe.",
-        ]
-
         return ScreenTextResponse(
             status="completed",
             has_potential_pii=has_pii,
@@ -85,58 +78,9 @@ class PrivacyService:
             detections=detections,
             redacted_text=redacted,
             limitations=limitations,
+            engine=engine,
+            ner_enabled=ner_enabled,
         )
-
-    def _regex_pii_detections(self, text: str) -> tuple[List[DetectionItem], str]:
-        """Deterministic regex fallback used when Presidio is unavailable."""
-        detections: List[DetectionItem] = []
-
-        for match in EMAIL_PATTERN.finditer(text):
-            detections.append(
-                DetectionItem(
-                    entity_type="EMAIL_ADDRESS",
-                    start=match.start(),
-                    end=match.end(),
-                    score=0.95,
-                    category="pii",
-                )
-            )
-        for match in SG_PHONE_PATTERN.finditer(text):
-            detections.append(
-                DetectionItem(
-                    entity_type="SG_PHONE_NUMBER",
-                    start=match.start(),
-                    end=match.end(),
-                    score=0.90,
-                    category="pii",
-                )
-            )
-        for match in SG_NRIC_PATTERN.finditer(text):
-            detections.append(
-                DetectionItem(
-                    entity_type="SG_NRIC_FIN",
-                    start=match.start(),
-                    end=match.end(),
-                    score=0.98,
-                    category="pii",
-                )
-            )
-        for match in CREDIT_CARD_PATTERN.finditer(text):
-            detections.append(
-                DetectionItem(
-                    entity_type="CREDIT_CARD",
-                    start=match.start(),
-                    end=match.end(),
-                    score=0.90,
-                    category="pii",
-                )
-            )
-
-        # Redact matches in reverse order so character offsets remain aligned
-        redacted = text
-        for item in sorted(detections, key=lambda d: d.start, reverse=True):
-            redacted = redacted[: item.start] + "[REDACTED]" + redacted[item.end :]
-        return detections, redacted
 
     def get_wellbeing_recommendation(
         self, user_id: UUID, data: WellbeingRecommendationRequest

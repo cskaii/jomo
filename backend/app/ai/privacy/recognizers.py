@@ -11,6 +11,17 @@ from __future__ import annotations
 from typing import List
 
 from presidio_analyzer import EntityRecognizer, Pattern, PatternRecognizer
+from presidio_analyzer.predefined_recognizers import EmailRecognizer
+from tldextract import TLDExtract
+
+
+class LocalEmailRecognizer(EmailRecognizer):
+    """Keep Presidio's email detector offline using the bundled suffix list."""
+
+    _suffixes = TLDExtract(suffix_list_urls=(), cache_dir=None)
+
+    def validate_result(self, pattern_text: str):
+        return self._suffixes(pattern_text).fqdn != ""
 
 # Public entity type names used in DetectionItem responses.
 SG_NRIC_FIN = "SG_NRIC_FIN"
@@ -37,6 +48,7 @@ _SG_PHONE_PATTERN = Pattern(
 def get_custom_recognizers() -> List[EntityRecognizer]:
     """Return custom Singapore PII recognisers to register with the analyzer."""
     return [
+        LocalEmailRecognizer(name="EmailRecognizer"),
         PatternRecognizer(
             supported_entity=SG_NRIC_FIN,
             patterns=[_NRIC_PATTERN],

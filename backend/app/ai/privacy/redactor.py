@@ -1,16 +1,14 @@
-"""Offset-safe deterministic redaction into ``[REDACTED]``.
-
-We redact directly from Presidio ``RecognizerResult`` spans rather than via the
-AnonymizerEngine, so the output token is exactly ``[REDACTED]`` and the behaviour
-is deterministic and easy to reason about (docs/ai-design.md §2).
-"""
+"""Presidio Anonymizer redaction with a consistent ``[REDACTED]`` token."""
 from __future__ import annotations
 
 from typing import Iterable, List
 
 from presidio_analyzer import RecognizerResult
+from presidio_anonymizer import AnonymizerEngine
+from presidio_anonymizer.entities import OperatorConfig
 
 REDACTED_TOKEN = "[REDACTED]"
+_anonymizer = AnonymizerEngine()
 
 
 def dedupe_results(results: Iterable[RecognizerResult]) -> List[RecognizerResult]:
@@ -38,7 +36,8 @@ def dedupe_results(results: Iterable[RecognizerResult]) -> List[RecognizerResult
 
 def redact(text: str, results: Iterable[RecognizerResult]) -> str:
     """Replace every detected span with ``[REDACTED]`` in reverse offset order."""
-    out = text
-    for r in sorted(dedupe_results(results), key=lambda r: r.start, reverse=True):
-        out = out[: r.start] + REDACTED_TOKEN + out[r.end:]
-    return out
+    return _anonymizer.anonymize(
+        text=text,
+        analyzer_results=dedupe_results(results),
+        operators={"DEFAULT": OperatorConfig("replace", {"new_value": REDACTED_TOKEN})},
+    ).text

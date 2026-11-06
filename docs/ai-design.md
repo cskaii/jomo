@@ -1,49 +1,32 @@
-# JOMO — AI Architecture & Heuristics Design
+# Privacy Guardian: Microsoft Presidio
 
-## 1. Modular Tooling Approach
+Text submitted to Privacy Guardian is analyzed by Microsoft Presidio Analyzer and redacted by Presidio Anonymizer. No alternative regex service or external LLM is used. Presidio itself includes pattern recognisers and supports custom recognisers for Singapore phone numbers and NRIC/FIN-like formats.
 
-Rather than routing all user interactions to an opaque LLM, JOMO employs targeted, explainable, and privacy-preserving primitives:
+The English spaCy model runs inside the same backend to detect possible names and locations. The prototype defaults to `en_core_web_sm` to reduce model size. Blueprint section 10 recommends `en_core_web_lg`; that model can be selected with `AI_SPACY_MODEL=en_core_web_lg` after installing it and checking hosting resources. Neither model proves that every name or address will be found.
 
-1. **PII Detection:** Regex and Presidio heuristics configured for Singapore and international patterns (Emails, SG Phone numbers `+65 8xxx / 9xxx`, SG NRIC/FIN formats, Credit Cards).
-2. **Redaction:** Offset-safe deterministic string anonymization into `[REDACTED]`.
-3. **Wellbeing Coach:** Rule-based suggestions triggered by aggregate screen time thresholds rather than intrusive surveillance.
-4. **Mission Recommender:** Curated catalogue with duration and category filtering, providing deterministic fallback when external AI models are inactive.
+## Install
 
----
+From the backend directory:
 
-## 2. Implementation layout (`backend/app/ai/`)
-
-```
-ai/
-├── interfaces.py            # Protocols: TextScreeningProvider, WellbeingProvider, MissionProvider
-├── screening_service.py     # PresidioScreeningProvider + get_screening_provider() (cached, optional)
-└── privacy/
-    ├── recognizers.py        # Custom SG recognisers: SG_NRIC_FIN, SG_PHONE_NUMBER
-    ├── analyzer.py          # build_analyzer(): spaCy NER if model present, else NoOpNlpEngine pattern-only
-    └── redactor.py          # Offset-safe deterministic redaction to "[REDACTED]"
-```
-
-`PrivacyService.screen_text` calls `get_screening_provider()`; when it returns
-`None` (Presidio disabled or failed to init) it falls back to the deterministic
-regex recognisers kept inside the service. The HTTP contract
-(`ScreenTextResponse`) and the `ScreeningEvent` audit record (no raw text
-stored) are unchanged either way.
-
-## 3. Setup (cross-platform)
-
-```bash
-# Core AI dependencies (already pinned in requirements.txt)
-pip install presidio-analyzer presidio-anonymizer spacy
-
-# OPTIONAL NER model — enables PERSON/LOCATION/ORG detection.
-# If you skip this, screening still works (pattern-only). Linux/macOS/Windows:
+```sh
+pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-Notes for the team:
+Set `AI_PRESIDIO_ENABLED=true` and `AI_SPACY_MODEL=en_core_web_sm`, then restart the backend. On Render, the Build Command must include both installation commands joined with `&&`. Existing dashboard services need this setting updated explicitly.
 
-- The spaCy model is **optional**. The Privacy Guardian runs pattern-only
-  Presidio (email, credit card, IP, URL, SG NRIC/FIN, SG phone, ...) without it.
-- `AI_PRESIDIO_ENABLED=false` disables Presidio entirely and uses the regex
-  fallback only — useful for environments without the Presidio packages.
-- `AI_SPACY_MODEL` selects the NLP model name (default `en_core_web_sm`).
+## Request handling
+
+`POST /api/v1/ai/privacy/text` accepts an authenticated request with `text`, `checks: ["pii"]` and `language: "en"`. Text is limited to 10,000 characters. Presidio runs in a worker thread so inference does not block the API's event loop. The analyzer is warmed at startup and cached per model configuration.
+
+The result includes detection types, character offsets, scores, a draft with `[REDACTED]` replacements, limitations, `engine: "presidio"` and `ner_enabled`. The frontend displays the actual engine and mode. If the spaCy model is missing, Presidio still supports pattern-based identification and clearly reports the lack of named-entity detection. It never downloads a model during a screening request.
+
+If Presidio is disabled, fails to initialize or cannot complete a scan, the endpoint returns HTTP 503 `SCREENING_UNAVAILABLE`; it does not claim success or run another detector. Only English is currently accepted. Harmful-content classification is outside this PII feature.
+
+## Privacy
+
+Original text and detection values are not stored or logged. Audit events contain category names only. Error logs contain exception classes, never exception messages which might include the submitted text. Presidio email validation uses the bundled domain-suffix list without network requests or shared disk cache. All screening happens within the JOMO backend.
+
+## Tests
+
+`python -m pytest -q` exercises real Presidio detection and anonymization, offline email checks, unavailable-engine behavior, input privacy, authorization and request limits. Named-entity tests require the selected spaCy model. A scan without detections never establishes that text is safe.

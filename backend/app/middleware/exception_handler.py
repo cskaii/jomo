@@ -61,6 +61,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "AUTH_UNAVAILABLE": "Authentication is temporarily unavailable.",
                 "STORAGE_NOT_CONFIGURED": "Photo uploads are not available yet.",
                 "RATE_LIMIT_UNAVAILABLE": "Request limiting is temporarily unavailable.",
+                "SCREENING_UNAVAILABLE": "Microsoft Presidio is temporarily unavailable. Please retry.",
             }
             code = exc.detail.get("code") if isinstance(exc.detail, dict) else None
             if code in safe_messages:

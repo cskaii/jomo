@@ -256,6 +256,8 @@ export const session = z.object({
   created_at: stamp,
 });
 export const screening = z.object({
+  engine: z.enum(["presidio", "none"]).default("none"),
+  ner_enabled: z.boolean().default(false),
   status: z.string(),
   has_potential_pii: z.boolean(),
   has_harmful_content_indicators: z.boolean(),
