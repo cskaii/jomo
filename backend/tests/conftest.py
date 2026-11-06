@@ -7,6 +7,7 @@ os.environ["DATABASE_URL"] = "sqlite:///" + _test_database.name.replace("\\", "/
 os.environ["APP_ENV"] = "test"
 os.environ["DEV_AUTH_ENABLED"] = "true"
 os.environ["AUTO_SEED_CATALOG"] = "true"  # Fixtures only; deployment defaults to empty.
+os.environ["AI_PRESIDIO_ENABLED"] = "true"
 
 # Clear the lru_cache on Settings so the test env vars above are picked up
 # even if get_settings() was already imported elsewhere before conftest runs.

@@ -14,7 +14,7 @@ class DetectionItem(BaseModel):
 class ScreenTextRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000)
     checks: List[Literal["pii", "harmful_content"]] = Field(default_factory=lambda: ["pii", "harmful_content"], min_length=1, max_length=2)
-    language: str = Field("en", min_length=2, max_length=10)
+    language: Literal["en"] = "en"
 
     @field_validator("text")
     @classmethod
@@ -31,6 +31,8 @@ class ScreenTextResponse(BaseModel):
     detections: List[DetectionItem] = Field(default_factory=list)
     redacted_text: str
     limitations: List[str] = Field(default_factory=list)
+    engine: Literal["presidio", "none"] = "none"
+    ner_enabled: bool = False
 
 
 class WellbeingRecommendationRequest(BaseModel):

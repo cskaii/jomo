@@ -35,7 +35,7 @@ Connect this Git repository and use its `render.yaml` Blueprint, or create a Pyt
 | Setting | Value |
 |---|---|
 | Root directory | `backend` |
-| Build command | `pip install -r requirements.txt` |
+| Build command | `pip install -r requirements.txt && python -m spacy download en_core_web_sm` |
 | Start command | `python -m app.db.setup && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health-check path | `/api/health` |
 
@@ -52,7 +52,8 @@ Enter the following environment variables:
 | `AUTH_AUDIENCE` | `authenticated` |
 | `DEV_AUTH_ENABLED` | `false` |
 | `AUTO_SEED_CATALOG` | `false` |
-| `AI_PRESIDIO_ENABLED` | `false` |
+| `AI_PRESIDIO_ENABLED` | `true` |
+| `AI_SPACY_MODEL` | `en_core_web_sm` |
 | `FRONTEND_URL` | Your final Vercel production origin, including `https://`, with no trailing slash. |
 | `CORS_ORIGINS` | The same exact Vercel production origin. For several origins, use a comma-separated list. |
 
@@ -85,7 +86,7 @@ Once the Vercel URL is known, update `FRONTEND_URL`, `CORS_ORIGINS` and Supabase
 
 ## Scope
 
-This prototype does not include real photo upload storage, native device/app blocking or background surveillance. Personal activities do not require photos; group activities support peer confirmation. Privacy screening uses the built-in regex provider by default. To use optional Presidio/NER later, install `requirements-ai.txt`, explicitly enable it and verify the optional model separately.
+This prototype does not include real photo upload storage, native device/app blocking or background surveillance. Personal activities do not require photos; group activities support peer confirmation. Privacy screening uses Microsoft Presidio Analyzer and Anonymizer only. The Render build installs its small English spaCy model. If the model is absent, Presidio reports pattern-only operation; if Presidio itself fails or is disabled, screening returns HTTP 503 with no substitute detector. Text is processed within the backend and is not retained. Existing Render services must update their Build Command and AI environment variables explicitly; committing render.yaml only updates Blueprint-managed services after a sync.
 
 All database credentials stay in ignored environment files or hosting environment settings. The earlier example Supabase project and its keys were removed from active configuration.
 

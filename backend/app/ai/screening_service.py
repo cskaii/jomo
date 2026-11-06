@@ -4,13 +4,13 @@ Implements the ``TextScreeningProvider`` Protocol from ``app.ai.interfaces`` and
 maps Presidio results onto the existing ``ScreenTextResponse`` contract so the
 HTTP layer and response shape are unchanged.
 
-This module is optional: ``get_screening_provider`` returns ``None`` when
-Presidio is disabled or fails to initialise, so ``PrivacyService`` falls back to
-its built-in regex recognisers (blueprint §0.2 "Graceful fallback").
+``get_screening_provider`` returns ``None`` when Presidio is disabled or cannot
+initialize. The API reports unavailability; it never substitutes another engine.
 """
 from __future__ import annotations
 
 import logging
+from threading import Lock
 from typing import Any, Dict, List, Optional
 
 from app.core.config import Settings, get_settings
@@ -54,10 +54,12 @@ class PresidioScreeningProvider:
     def screen(self, text: str, language: str = "en") -> Dict[str, Any]:
         # Presidio imports spaCy and its compiled extensions. Keep that optional
         # dependency out of application startup so restricted Windows machines
-        # can still run the garden and use the deterministic regex fallback.
+        # can still use unrelated features when screening is unavailable.
         from app.ai.privacy.redactor import dedupe_results, redact
 
-        results = self._analyzer.analyze(text=text, language=language)
+        if language != "en":
+            raise ValueError("This deployment supports English screening only.")
+        results = self._analyzer.analyze(text=text, language=language) if text else []
         results = [r for r in results if r.entity_type not in EXCLUDE_ENTITIES]
         results = dedupe_results(results)
 
@@ -79,13 +81,16 @@ class PresidioScreeningProvider:
             "has_harmful_content_indicators": False,
             "detections": detections,
             "redacted_text": redacted,
-            "limitations": list(DEFAULT_LIMITATIONS),
+            "limitations": list(DEFAULT_LIMITATIONS) + ([] if self.ner_enabled else [
+                "The language model is unavailable; this scan checks pattern-based identifiers only."
+            ]),
             "ner_enabled": self.ner_enabled,
         }
 
 
 # Module-level cache so the (relatively expensive) analyzer is built once.
-_provider_cache: Dict[str, Optional[PresidioScreeningProvider]] = {}
+_provider_cache: Dict[tuple, Optional[PresidioScreeningProvider]] = {}
+_provider_lock = Lock()
 
 
 def get_screening_provider(
@@ -93,30 +98,35 @@ def get_screening_provider(
 ) -> Optional[PresidioScreeningProvider]:
     """Return a cached Presidio screening provider, or ``None`` on failure.
 
-    Returns ``None`` (so the caller falls back to regex) when Presidio is
+    Returns ``None`` (so the caller reports unavailability) when Presidio is
     disabled via ``AI_PRESIDIO_ENABLED`` or when analyzer construction raises.
     """
     settings = settings or get_settings()
-    cache_key = "provider"
-    if cache_key in _provider_cache:
+    if not settings.AI_PRESIDIO_ENABLED:
+        return None
+
+    cache_key = (settings.AI_PRESIDIO_ENABLED, settings.AI_SPACY_MODEL)
+    with _provider_lock:
+        if cache_key not in _provider_cache:
+            _provider_cache[cache_key] = _build_provider(settings)
         return _provider_cache[cache_key]
 
-    if not settings.AI_PRESIDIO_ENABLED:
-        logger.info("Presidio screening disabled (AI_PRESIDIO_ENABLED=false).")
-        _provider_cache[cache_key] = None
-        return None
+
+def _build_provider(settings: Settings) -> Optional[PresidioScreeningProvider]:
 
     try:
         # Import lazily: some Windows Application Control policies block spaCy's
-        # native DLLs. Import failures are expected to select the regex fallback
-        # instead of preventing the entire API from starting.
+        # native DLLs. Import failures make screening unavailable without affecting
+        # unrelated application features.
         from app.ai.privacy.analyzer import build_analyzer
 
         analyzer, ner_enabled = build_analyzer(settings)
         provider = PresidioScreeningProvider(analyzer, ner_enabled=ner_enabled)
-        _provider_cache[cache_key] = provider
+        # Verify that the matching Anonymizer is available before advertising Presidio.
+        from app.ai.privacy.redactor import redact
+        redact("", [])
+        logger.info("Privacy Guardian initialized: provider=presidio ner_enabled=%s", ner_enabled)
         return provider
-    except Exception as exc:  # noqa: BLE001 - fall back to regex on any failure
-        logger.warning("Presidio screening unavailable (%s); using regex fallback.", exc)
-        _provider_cache[cache_key] = None
+    except Exception as exc:  # noqa: BLE001 - report screening unavailability
+        logger.warning("Presidio screening unavailable (%s).", type(exc).__name__)
         return None

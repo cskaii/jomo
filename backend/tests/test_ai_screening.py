@@ -14,7 +14,7 @@ from app.core.config import get_settings
 
 pytestmark = pytest.mark.skipif(
     not get_settings().AI_PRESIDIO_ENABLED,
-    reason="Optional Presidio integration is disabled; core API tests cover regex screening.",
+    reason="Presidio integration is disabled in this test environment.",
 )
 
 
@@ -78,6 +78,7 @@ def test_privacy_text_endpoint_presidio(client):
     entity_types = {d["entity_type"] for d in res["data"]["detections"]}
     assert "EMAIL_ADDRESS" in entity_types
     assert "SG_NRIC_FIN" in entity_types
+    assert res["data"]["engine"] == "presidio"
 
 
 # --- Extended coverage -----------------------------------------------------
@@ -160,3 +161,43 @@ def test_endpoint_rejects_missing_auth(client):
         json={"text": "test@example.com", "checks": ["pii"]},
     )
     assert response.status_code == 401
+
+
+def test_disabled_presidio_never_substitutes_another_detector(client, monkeypatch):
+    monkeypatch.setattr(get_settings(), "AI_PRESIDIO_ENABLED", False)
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "test@example.com", "checks": ["pii"]},
+                           headers={"Authorization": f"Bearer {uuid.uuid4()}"})
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "SCREENING_UNAVAILABLE"
+    assert "redacted_text" not in response.text
+
+
+def test_presidio_failure_reports_unavailability_without_logging_input(client, monkeypatch, caplog):
+    class BrokenProvider:
+        def screen(self, text, language):
+            raise RuntimeError("private-input@example.com")
+
+    monkeypatch.setattr("app.services.privacy_service.get_screening_provider", lambda: BrokenProvider())
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "private-input@example.com", "checks": ["pii"]},
+                           headers={"Authorization": f"Bearer {uuid.uuid4()}"})
+    assert response.status_code == 503
+    assert "private-input@example.com" not in response.text
+    assert "private-input@example.com" not in caplog.text
+
+
+def test_presidio_email_validation_does_not_use_network(monkeypatch):
+    import requests
+
+    def unexpected_network(*args, **kwargs):
+        raise AssertionError("Text screening must not make outbound requests")
+
+    monkeypatch.setattr(requests.sessions.Session, "request", unexpected_network)
+    result = get_screening_provider().screen("Please email privacy@example.com", "en")
+    assert "EMAIL_ADDRESS" in {d["entity_type"] for d in result["detections"]}
+    assert "privacy@example.com" not in result["redacted_text"]
+
+
+def test_unsupported_screening_language_is_rejected(client):
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "test", "checks": ["pii"], "language": "xx"},
+                           headers={"Authorization": f"Bearer {uuid.uuid4()}"})
+    assert response.status_code == 422

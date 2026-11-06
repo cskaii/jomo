@@ -11,8 +11,7 @@ Two operating modes (blueprint §0.2 "Graceful fallback"):
    only NER-based entities are unavailable.
 
 Callers should treat analyzer construction as potentially failing: ``build``
-raises on hard errors so the screening service can fall back to the regex
-provider defined in ``PrivacyService``.
+raises on hard errors so the API can report screening unavailability.
 """
 from __future__ import annotations
 
@@ -67,6 +66,7 @@ def build_analyzer(settings: Settings) -> Tuple[AnalyzerEngine, bool]:
                 nlp_engine=nlp_engine,
                 registry_configuration={"supported_languages": ["en"]},
             ).create_recognizer_registry()
+            registry.remove_recognizer("EmailRecognizer", language="en")
             for recognizer in custom_recognizers:
                 registry.add_recognizer(recognizer)
             analyzer = AnalyzerEngine(
@@ -79,7 +79,7 @@ def build_analyzer(settings: Settings) -> Tuple[AnalyzerEngine, bool]:
         except Exception as exc:  # noqa: BLE001 - any NLP init issue => pattern-only
             logger.warning(
                 "spaCy NER failed to initialise (%s); using pattern-only fallback.",
-                exc,
+                type(exc).__name__,
             )
     else:
         logger.info(
@@ -96,6 +96,7 @@ def build_analyzer(settings: Settings) -> Tuple[AnalyzerEngine, bool]:
         nlp_engine=nlp_engine,
         registry_configuration={"supported_languages": ["en"]},
     ).create_recognizer_registry()
+    registry.remove_recognizer("EmailRecognizer", language="en")
     for recognizer in custom_recognizers:
         registry.add_recognizer(recognizer)
     analyzer = AnalyzerEngine(

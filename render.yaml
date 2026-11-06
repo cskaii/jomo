@@ -3,7 +3,7 @@ services:
     name: jomo-backend
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
     startCommand: python -m app.db.setup && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
@@ -16,7 +16,9 @@ services:
       - key: AUTO_SEED_CATALOG
         value: "false"
       - key: AI_PRESIDIO_ENABLED
-        value: "false"
+        value: "true"
+      - key: AI_SPACY_MODEL
+        value: en_core_web_sm
       - key: DATABASE_URL
         sync: false
       - key: AUTH_PROVIDER

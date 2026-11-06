@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     AUTO_SEED_CATALOG: bool = False
 
     # Presidio PII screening (blueprint §0.4 / §6.2)
-    AI_PRESIDIO_ENABLED: bool = False
+    AI_PRESIDIO_ENABLED: bool = True
     # spaCy model for NER-based detection. Optional: if missing, screening falls
     # back to pattern-only Presidio (blueprint §0.2 "Graceful fallback").
     AI_SPACY_MODEL: str = "en_core_web_sm"

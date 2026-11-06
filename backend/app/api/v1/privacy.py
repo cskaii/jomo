@@ -17,7 +17,7 @@ router = APIRouter(prefix="/ai", tags=["AI & Privacy"])
 
 
 @router.post("/privacy/text", response_model=ResponseEnvelope[ScreenTextResponse])
-async def screen_text(
+def screen_text(
     request: Request,
     payload: ScreenTextRequest,
     current_user: CurrentUser,

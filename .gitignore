@@ -39,6 +39,7 @@ htmlcov/
 .next/
 out/
 frontend/.next/
+frontend/.next-presidio-check/
 frontend/out/
 
 # Production builds
