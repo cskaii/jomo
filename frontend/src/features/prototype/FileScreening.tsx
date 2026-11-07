@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { apiClient } from "@/services/apiClient";
 import { z } from "@/services/prototype";
 import { Feedback, Panel, Submit, useAction } from "./ui";
+import { LoadingScene } from "@/components/common/LoadingScene";
 
 const common = {
   status: z.literal("completed"),
@@ -105,6 +106,9 @@ export default function FileScreening({ kind }: { kind: "image" | "structured" }
         onChange={event => setConsent(event.target.checked)} />I agree to send this file to JOMO for this screening request.</label>
       <div className="j-row"><Submit pending={action.pending}>{image ? "Redact image" : "Screen data file"}</Submit>
         <button className="j-button secondary" type="button" onClick={clear}>Clear file and result</button></div>
+      {action.pending && <LoadingScene variant="inline" section="Privacy Guardian"
+        title={image ? "Looking a little closer." : "A thoughtful check, field by field."}
+        description={image ? "Reading visible text and checking for personal details…" : "Checking your data file for personal information…"} />}
       <Feedback action={action} />
     </form>
     {result && <section aria-label="File screening result" aria-live="polite">

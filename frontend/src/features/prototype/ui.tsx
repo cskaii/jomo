@@ -7,33 +7,57 @@ import {
   type ReactNode,
 } from "react";
 import { message } from "@/services/prototype";
-export function useResource<T>(load: () => Promise<T>) {
+import { cachedResource, clearResourceCache, fetchResource } from "@/lib/resourceCache";
+import { sessionOwner } from "@/services/authSession";
+import { PageLoading } from "@/components/common/PageLoading";
+export function useResource<T>(load: () => Promise<T>, cacheKey?: string) {
+  const key = cacheKey ?? load;
+  const owner = typeof window === "undefined" ? "" : sessionOwner(localStorage.getItem("jomo_auth_token"));
   const [state, setState] = useState<{
     data?: T;
     error?: string;
     load?: typeof load;
     revision?: number;
+    owner?: string;
+    key?: typeof key;
   }>({});
   const [revision, setRevision] = useState(0);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   useEffect(() => {
     let current = true;
-    load()
+    fetchResource(key, load, owner, revision > 0)
       .then((data) => {
-        if (current) setState({ data, load, revision });
+        if (current && owner === sessionOwner(localStorage.getItem("jomo_auth_token")))
+          setState({ data, load, revision, owner, key });
       })
       .catch((error: unknown) => {
-        if (current) setState({ error: message(error), load, revision });
+        if (current) setState(previous => ({
+          data: previous.owner === owner && previous.key === key ? previous.data : undefined,
+          error: message(error), load, revision, owner, key,
+        }));
       });
     return () => {
       current = false;
     };
-  }, [load, revision]);
-  const current = state.load === load && state.revision === revision;
+  }, [load, revision, key, owner]);
+  useEffect(() => {
+    const changed = (event: StorageEvent) => {
+      if (event.key === "jomo_auth_token") {
+        clearResourceCache();
+        refresh();
+      }
+    };
+    window.addEventListener("storage", changed);
+    return () => window.removeEventListener("storage", changed);
+  }, [refresh]);
+  const current = state.load === load && state.revision === revision && state.owner === owner;
+  const cached = cachedResource<T>(key, owner);
+  const data = state.owner === owner && state.key === key ? state.data ?? cached : cached;
   return {
-    data: current ? state.data : undefined,
+    data,
     error: current ? state.error : undefined,
-    loading: !current,
+    loading: !current && data === undefined,
+    refreshing: !current,
     refresh,
   };
 }
@@ -86,11 +110,7 @@ export function ResourceState({
   retry: () => void;
 }) {
   if (loading)
-    return (
-      <p role="status" className="j-panel">
-        Growing your view…
-      </p>
-    );
+    return <PageLoading />;
   if (error)
     return (
       <div role="alert" className="j-panel j-error">

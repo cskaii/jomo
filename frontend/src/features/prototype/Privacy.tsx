@@ -4,6 +4,7 @@ import { request, screening, z } from "@/services/prototype";
 import { useAction, Feedback, Panel, Heading, Submit } from "./ui";
 import { startEvilDuckGame } from "@/features/privacy-game/EvilDuckGame";
 import FileScreening from "./FileScreening";
+import { LoadingScene } from "@/components/common/LoadingScene";
 export default function Privacy() {
   const [text, setText] = useState(""),
     [consent, setConsent] = useState(false),
@@ -114,6 +115,8 @@ export default function Privacy() {
               Clear text and result
             </button>
           </div>
+          {action.pending && !result && <LoadingScene variant="inline" section="Privacy Guardian"
+            title="A little care before you share." description="Checking your text for personal information…" />}
           <Feedback action={action} />
         </form>
       </Panel>

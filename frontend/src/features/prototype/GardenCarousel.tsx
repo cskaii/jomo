@@ -149,7 +149,7 @@ function GardenPreviewCard({
     () => request(inventory.array(), `/gardens/${item.id}/inventory`),
     [item.id],
   );
-  const view = useResource(load);
+  const view = useResource(load, `garden-preview:${item.id}`);
   const personal = item.garden_type === "personal";
   const groupName = personal ? item.name : directory.groupNames[item.owner_group_id ?? ""] ?? item.name;
   const objects = (view.data ?? [])

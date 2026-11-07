@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, X } from "lucide-react";
+import { canAutoChallenge, quizDelay, quizStorageKey, QUIZ_SETTLE_MS } from "@/lib/privacyChallenge";
 
 type Round = {
   name: string;
@@ -67,7 +68,7 @@ function duckRound() {
   return rounds[Math.floor(Math.random() * rounds.length)];
 }
 
-export function EvilDuckGame() {
+export function EvilDuckGame({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [round, setRound] = useState<Round>(rounds[0]);
   const [result, setResult] = useState<"safe" | "tricked" | null>(null);
@@ -75,19 +76,30 @@ export function EvilDuckGame() {
   const [selected, setSelected] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dialog = useRef<HTMLElement>(null);
+  const lastShown = useRef(0);
+  const lastActivity = useRef(0);
+  const settledAt = useRef(0);
+  const storageKey = quizStorageKey(userId);
+
+  const remember = useCallback(() => {
+    lastShown.current = Date.now();
+    try { localStorage.setItem(storageKey, String(lastShown.current)); } catch { /* Use the in-memory cooldown if storage is blocked. */ }
+  }, [storageKey]);
 
   const startRound = useCallback(() => {
+    remember();
     setRound(duckRound());
     setSelected(null);
     setResult(null);
     setOpen(true);
-  }, []);
+  }, [remember]);
 
   const close = useCallback(() => {
+    remember();
     setOpen(false);
     setResult(null);
     setSelected(null);
-  }, []);
+  }, [remember]);
 
   useEffect(() => {
     const launch = () => startRound();
@@ -97,12 +109,47 @@ export function EvilDuckGame() {
 
   useEffect(() => {
     if (open) return;
-    const delay = 45_000 + Math.random() * 75_000;
-    timer.current = setTimeout(startRound, delay);
+    if (!settledAt.current) settledAt.current = Date.now() + QUIZ_SETTLE_MS;
+    lastActivity.current = Date.now();
+    const active = () => { lastActivity.current = Date.now(); };
+    const schedule = () => {
+      if (timer.current) clearTimeout(timer.current);
+      const now = Date.now();
+      try { lastShown.current = Number(localStorage.getItem(storageKey)) || lastShown.current; } catch { /* Keep the in-memory value. */ }
+      const wait = Math.max(quizDelay(lastShown.current, now), settledAt.current - now, 0);
+      timer.current = setTimeout(attempt, Math.max(wait, 1000));
+    };
+    const attempt = () => {
+      const now = Date.now();
+      try { lastShown.current = Number(localStorage.getItem(storageKey)) || lastShown.current; } catch { /* Keep the in-memory value. */ }
+      if (quizDelay(lastShown.current, now) > 0) { schedule(); return; }
+      const focused = document.activeElement;
+      const ready = canAutoChallenge({
+        visible: document.visibilityState === "visible" && document.hasFocus(),
+        active: now - lastActivity.current < 90_000,
+        editing: focused instanceof HTMLElement && !!focused.closest("input, textarea, select, [contenteditable='true']"),
+        busy: !!document.querySelector("[aria-modal='true'], [aria-busy='true'], .j-loading-placeholder")
+          || /^\/(focus|activities)(\/|$)/.test(window.location.pathname),
+      });
+      if (ready) startRound();
+      else timer.current = setTimeout(attempt, 15_000);
+    };
+    const changed = (event: StorageEvent) => { if (event.key === storageKey) schedule(); };
+    window.addEventListener("pointerdown", active);
+    window.addEventListener("pointermove", active, { passive: true });
+    window.addEventListener("keydown", active);
+    window.addEventListener("focus", active);
+    window.addEventListener("storage", changed);
+    schedule();
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      window.removeEventListener("pointerdown", active);
+      window.removeEventListener("pointermove", active);
+      window.removeEventListener("keydown", active);
+      window.removeEventListener("focus", active);
+      window.removeEventListener("storage", changed);
     };
-  }, [open, startRound]);
+  }, [open, startRound, storageKey]);
 
   useEffect(() => {
     if (!open) return;

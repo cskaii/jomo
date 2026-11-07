@@ -118,7 +118,7 @@ function GardenView({ gardenId }: { gardenId: string }) {
     ]);
     return { details, items, shop, history, overview };
   }, [gardenId]);
-  const view = useResource(load),
+  const view = useResource(load, `garden-management:${gardenId}`),
     action = useAction(),
     [buy, setBuy] = useState<z.infer<typeof catalog> | null>(null);
   const [placing, setPlacing] = useState(""),

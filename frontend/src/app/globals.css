@@ -2326,3 +2326,67 @@ body:has(.j-immersive-garden) { overflow: hidden; }
   .j-purchase-confirm > button { padding: 0 10px; }
   .j-purchase-confirm > button.secondary { grid-column: 2; }
 }
+
+/* Shared garden loading scene: inline SVG, no extra image requests. */
+.j-loading-scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: max(360px, calc(100svh - 300px));
+  width: 100%;
+  padding: 32px 20px;
+  text-align: center;
+  color: #35472b;
+  isolation: isolate;
+}
+.j-loading-composition { display: flex; flex-direction: column; align-items: center; width: min(100%, 600px); }
+.j-loading-wordmark { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #35472b; }
+.j-loading-wordmark svg { width: 34px; height: 27px; }
+.j-loading-wordmark span { font: 26px/1.1 Georgia, serif; letter-spacing: .14em; padding-left: .14em; }
+.j-loading-art { display: block; width: 210px; height: auto; margin: 14px 0 4px; overflow: visible; }
+.j-loading-section { margin: 0 0 12px; color: #65734f; font: 600 10px/1.5 Arial, sans-serif; letter-spacing: .18em; text-transform: uppercase; }
+.j-loading-title { margin: 0; max-width: 100%; color: #35472b; font: 400 clamp(26px, 3vw, 38px)/1.15 Georgia, serif; letter-spacing: -.8px; overflow-wrap: anywhere; text-wrap: balance; }
+.j-loading-description { margin: 16px 0 0; max-width: 400px; color: #667457; font-size: 15px; line-height: 1.6; text-wrap: balance; }
+.j-loading-dots { display: flex; gap: 10px; margin-top: 24px; height: 12px; align-items: center; }
+.j-loading-dots span { display: block; width: 8px; height: 8px; background: #859d60; border-radius: 50%; animation: j-loading-dot 1.8s ease-in-out infinite; }
+.j-loading-dots span:nth-child(2) { animation-delay: .2s; }
+.j-loading-dots span:nth-child(3) { animation-delay: .4s; }
+.j-loading-sprout { transform-origin: 140px 193px; animation: j-loading-sway 4s ease-in-out infinite; }
+.j-loading-float { animation: j-loading-drift 5s ease-in-out infinite; }
+.j-loading-sun { animation: j-loading-glow 4s ease-in-out infinite; }
+.j-loading-patience { max-width: 380px; margin: 26px 0 0; font-size: 12px; color: #73776a; visibility: hidden; animation: j-loading-reassure 0s 12s forwards; }
+.j-loading-tagline { margin: 40px 0 0; color: #667457; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
+.j-loading-scene--welcome { min-height: 100svh; background: radial-gradient(ellipse at 50% 42%, #f0f0e2 0, #faf8ef 58%); padding: 40px 24px; }
+.j-loading-scene--welcome .j-loading-wordmark span { font-size: 38px; }
+.j-loading-scene--welcome .j-loading-art { width: clamp(190px, 30vh, 270px); margin-top: 24px; }
+.j-loading-scene--welcome .j-loading-title { font-size: clamp(30px, 4.3vw, 54px); }
+.j-loading-scene--welcome .j-loading-description { font-size: 18px; }
+.j-loading-scene--welcome .j-loading-section { display: none; }
+.j-loading-scene--inline { min-height: 0; padding: 22px 14px 8px; }
+.j-loading-scene--inline .j-loading-wordmark, .j-loading-scene--inline .j-loading-section, .j-loading-scene--inline .j-loading-patience { display: none; }
+.j-loading-scene--inline .j-loading-art { width: 90px; margin: 0 0 8px; }
+.j-loading-scene--inline .j-loading-title { font-size: 20px; letter-spacing: -.3px; }
+.j-loading-scene--inline .j-loading-description { margin-top: 8px; font-size: 13px; }
+.j-loading-scene--inline .j-loading-dots { margin-top: 15px; }
+.j-loading-scene--inline .j-loading-dots span { width: 6px; height: 6px; }
+.j-immersive-garden-status:has(.j-loading-scene) { background: var(--canvas); }
+@keyframes j-loading-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes j-loading-drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes j-loading-glow { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+@keyframes j-loading-dot { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes j-loading-reassure { to { visibility: visible; } }
+@media (max-width: 640px) {
+  .j-loading-scene { min-height: max(340px, calc(100svh - 240px)); padding: 24px 16px; }
+  .j-loading-art { width: 175px; }
+  .j-loading-title { font-size: 28px; }
+  .j-loading-scene--welcome { min-height: 100svh; padding-block: 32px; }
+  .j-loading-scene--inline { min-height: 0; padding: 20px 10px 8px; }
+  .j-loading-scene--inline .j-loading-title { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .j-loading-sprout, .j-loading-float, .j-loading-sun, .j-loading-dots span { animation: none; }
+  .j-loading-dots span:nth-child(1) { opacity: .35; }
+  .j-loading-dots span:nth-child(2) { opacity: .65; }
+}

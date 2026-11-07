@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { TodayOverview } from "./TodayOverview";
+import { LoadingScene } from "@/components/common/LoadingScene";
 import {
   request,
   usage,
@@ -27,12 +28,18 @@ async function load() {
     request(usage, "/insights/summary"),
     request(preferences, "/users/me/preferences"),
   ]);
-  const recommendation = summary.days_recorded
-    ? await request(coach, "/ai/wellbeing/recommendation", "post", {}).catch(
-        () => null,
-      )
-    : null;
-  return { summary, prefs, recommendation };
+  return { summary, prefs };
+}
+async function loadRecommendation() {
+  return request(coach, "/ai/wellbeing/recommendation", "post", {});
+}
+
+function CoachRecommendation() {
+  const view = useResource(loadRecommendation);
+  if (view.data) return <><p>{view.data.suggestion}</p><Link href="/activities">Make a little space →</Link></>;
+  if (view.loading) return <LoadingScene variant="inline" section="A gentle nudge"
+    title="A little perspective is on its way." description="You can explore your Insights while we gather a suggestion." />;
+  return <p>Coach is unavailable. You can still explore offline activities.</p>;
 }
 const manualForm = z
   .object({
@@ -52,13 +59,16 @@ export default function Insights() {
     [social, setSocial] = useState("30");
   if (!view.data)
     return (
+      <>
+      <TodayOverview />
       <ResourceState
         loading={view.loading}
         error={view.error}
         retry={view.refresh}
       />
+      </>
     );
-  const { summary, prefs, recommendation } = view.data;
+  const { summary, prefs } = view.data;
   const goal = prefs.daily_screen_goal_minutes;
   const today = summary.daily_breakdown.filter(
     (row) => row.usage_date === localDate(),
@@ -196,18 +206,9 @@ export default function Insights() {
           </Panel>
           <div>
             <Panel title="A gentle nudge">
-              {recommendation ? (
-                <>
-                  <p>{recommendation.suggestion}</p>
-                  <Link href="/activities">Make a little space →</Link>
-                </>
-              ) : (
-                <p>
-                  {summary.days_recorded
-                    ? "Coach is unavailable. You can still explore offline activities."
-                    : "Add usage before asking the coach for perspective."}
-                </p>
-              )}
+              {summary.days_recorded
+                ? <CoachRecommendation key={`${summary.total_screen_time_minutes}:${summary.days_recorded}`} />
+                : <p>Add usage before asking the coach for perspective.</p>}
             </Panel>
             <Panel title="Categories">
               {Object.keys(categories).length ? (
