@@ -1,5 +1,12 @@
 # JOMO — Change Log
 
+## 2026-11-08 — Shorten entry and tab transitions
+
+Reduced the deliberate welcome delay from 1.8 seconds to 0.6 seconds and tab
+transitions from 0.9 seconds to 0.12 seconds after the user reported slow entry
+and navigation. Graphical loading feedback remains while real requests run;
+this removes artificial waiting without claiming to eliminate backend cold starts.
+
 ## 2026-11-07 — Prepare backend migration from Render to Vercel
 
 Added a Vercel Container deployment with Dockerfile.vercel and Container preset,
