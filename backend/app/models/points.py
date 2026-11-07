@@ -12,8 +12,8 @@ class PointTransaction(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     garden_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    activity_participant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("activity_participants.id"), nullable=True, index=True)
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    activity_participant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("activity_participants.id", ondelete="SET NULL"), nullable=True, index=True)
     transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     reason: Mapped[str] = mapped_column(String(100), nullable=False)

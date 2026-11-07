@@ -19,7 +19,7 @@ def test_setup_migrates_and_is_repeatable(tmp_path):
     second = setup_database(url, allow_sqlite=True)
     assert first == second
     assert first["tables"] == 30
-    assert first["revision"] == "b7d210c42f01"
+    assert first["revision"] == "c8e31a04d912"
     assert first["catalog_items"] == 0
     assert setup_database(url, allow_sqlite=True, check_only=True)["catalog_items"] == 0
 

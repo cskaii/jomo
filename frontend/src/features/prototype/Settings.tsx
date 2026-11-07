@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { clearSession } from "@/services/authSession";
 import {
   request,
   profile,
@@ -182,6 +183,70 @@ function SettingsForm({
           <Feedback action={action} />
         </form>
       </Panel>
+      <DeleteAccount />
     </>
+  );
+}
+
+function DeleteAccount() {
+  const action = useAction();
+  const [expanded, setExpanded] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  return (
+    <Panel title="Delete account">
+      <p>
+        Permanently delete your login, profile, personal garden, coins, and activity
+        history. This cannot be undone.
+      </p>
+      <p>
+        Your shared gardens, plants, pets, and group coins stay with the remaining
+        members. Ownership transfers to another active member when needed. Groups
+        with no active members left are deleted.
+      </p>
+      {!expanded ? (
+        <button className="j-button danger" type="button" onClick={() => setExpanded(true)}>
+          Delete my account
+        </button>
+      ) : (
+        <form className="j-form" onSubmit={(event) => {
+          event.preventDefault();
+          if (confirmation !== "DELETE" || action.pending) return;
+          void action.run(async () => {
+            try {
+              await request(z.object({ success: z.literal(true) }), "/users/me", "delete", {
+                password, confirmation,
+              }, { timeout: 45000 });
+              clearSession();
+              window.location.replace("/login?account_deleted=1");
+            } finally {
+              setPassword("");
+            }
+          });
+        }}>
+          <label>
+            Current password
+            <input type="password" autoComplete="current-password" required
+              maxLength={1024} value={password} disabled={action.pending}
+              onChange={(event) => setPassword(event.target.value)} />
+          </label>
+          <label>
+            Type DELETE to confirm
+            <input required pattern="DELETE" autoComplete="off" spellCheck={false}
+              value={confirmation} disabled={action.pending}
+              onChange={(event) => setConfirmation(event.target.value)} />
+          </label>
+          <button className="j-button danger" type="submit" aria-busy={action.pending}
+            disabled={action.pending || confirmation !== "DELETE" || !password}>
+            {action.pending ? "Deleting account…" : "Permanently delete my account"}
+          </button>
+          <button className="j-button secondary" type="button" disabled={action.pending}
+            onClick={() => { setExpanded(false); setPassword(""); setConfirmation(""); }}>
+            Keep my account
+          </button>
+          <Feedback action={action} />
+        </form>
+      )}
+    </Panel>
   );
 }

@@ -2,6 +2,9 @@
 
 See `docs/deployment.md` for the current project and complete environment mapping.
 
+For account deletion on an existing database, see `docs/account-deletion.md` and
+run `supabase/account_deletion.sql`, rather than rerunning the initial schema.
+
 From `backend`, with dependencies installed and `backend/.env` filled:
 
 ```powershell

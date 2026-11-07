@@ -44,7 +44,7 @@ def test_provider_rejection_does_not_leak_details(auth_client):
 def test_signup_confirmation_and_recovery_privacy(auth_client):
     client, install = auth_client
     install(lambda r: httpx.Response(200, json={"id":"new-user"}))
-    response = client.post("/api/v1/auth/register", json={"email":"person@example.com", "password":"test-password"})
+    response = client.post("/api/v1/auth/register", json={"email":"person@example.com", "password":"violet orbit lantern meadow"})
     assert response.status_code == 200
     assert response.json()["data"]["session"] is None
     install(lambda r: httpx.Response(400, json={"msg":"email absent"}))
@@ -59,6 +59,15 @@ def test_refresh_and_invalid_provider_sessions(auth_client):
     assert client.post("/api/v1/auth/refresh", json={"refresh_token":"previous"}).json()["data"]["refresh_token"] == "rotated"
     install(lambda r: httpx.Response(200, json={}))
     assert client.post("/api/v1/auth/refresh", json={"refresh_token":"previous"}).status_code == 503
+
+
+def test_provider_weak_password_rejection_has_safe_actionable_feedback(auth_client):
+    client, install = auth_client
+    install(lambda r: httpx.Response(422, json={"code": 422, "error_code": "weak_password", "msg": "private provider detail"}))
+    response = client.post("/api/v1/auth/register", json={"email": "person@example.com", "password": "violet orbit lantern meadow"})
+    assert response.status_code == 400
+    assert "password protection" in response.text
+    assert "private provider detail" not in response.text
 
 def test_legacy_session_and_unauthenticated_password_change(auth_client):
     client, _ = auth_client

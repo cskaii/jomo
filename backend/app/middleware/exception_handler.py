@@ -59,6 +59,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             # Preserve only intentional safe operational failures, never arbitrary details.
             safe_messages = {
                 "AUTH_UNAVAILABLE": "Authentication is temporarily unavailable.",
+                "ACCOUNT_DELETION_UNAVAILABLE": "Account deletion is unavailable. Please check the setup with the JOMO team or try again later.",
                 "STORAGE_NOT_CONFIGURED": "Photo uploads are not available yet.",
                 "RATE_LIMIT_UNAVAILABLE": "Request limiting is temporarily unavailable.",
                 "SCREENING_UNAVAILABLE": "Microsoft Presidio is temporarily unavailable. Please retry.",

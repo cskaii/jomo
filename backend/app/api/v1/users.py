@@ -6,11 +6,25 @@ from app.schemas.user import (
     UserProfileUpdateRequest,
     UserPreferencesResponse,
     UserPreferencesUpdateRequest,
+    DeleteAccountRequest,
 )
+from app.schemas.common import SuccessStatus
+from app.services.account_deletion_service import AccountDeletionService
 from app.services.user_service import UserService
 from app.utils.response import wrap_response
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.delete("/me", response_model=ResponseEnvelope[SuccessStatus])
+async def delete_current_user_account(
+    request: Request,
+    payload: DeleteAccountRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+):
+    await AccountDeletionService(db).delete(current_user, payload)
+    return wrap_response(SuccessStatus(message="Your account has been permanently deleted."), request)
 
 
 @router.get("/me", response_model=ResponseEnvelope[UserProfileResponse])
