@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { clearResourceCache } from "@/lib/resourceCache";
+import { waitForBackend } from "./backendConnection";
 
 export const authSession = z.object({
   access_token: z.string().min(1), refresh_token: z.string().min(1),
@@ -56,15 +57,19 @@ export async function accessToken(forceRefresh = false): Promise<string | null> 
   refreshing = (async () => {
     const refresh = localStorage.getItem("jomo_refresh_token");
     if (!refresh) { expireSession(); throw new Error("Your session expired. Please sign in again."); }
+    await waitForBackend();
     const response = await fetch(`${api}/auth/refresh`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refresh }), cache: "no-store",
+      signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) {
       if ([400, 401, 403].includes(response.status)) expireSession();
       throw new Error(response.status >= 500 ? "Authentication is temporarily unavailable. Please retry." : "Your session expired. Please sign in again.");
     }
     const result = z.object({ data: authSession }).parse(await response.json());
+    if (localStorage.getItem("jomo_auth_token") !== token || localStorage.getItem("jomo_refresh_token") !== refresh)
+      throw new Error("The account session changed. Please retry.");
     saveSession(result.data);
     return result.data.access_token;
   })();

@@ -33,7 +33,7 @@ function AccountForm({ registration }: { registration: boolean }) {
       await fetchResource("account-profile", async () => me, sessionOwner(session.access_token));
       setEntered(true);
       router.replace("/insights");
-    } catch (error) { setEntered(false); clearSession(); throw error; }
+      } catch (error) { setEntered(false); throw error; }
   }
   if (action.pending || entered) return <LoadingScene variant="welcome"
     title={registration && !entered ? "A little room to grow." : welcomeTitle(registration, welcomeProfile?.display_name, welcomeProfile?.username)}

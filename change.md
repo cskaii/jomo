@@ -1,5 +1,24 @@
 # JOMO — Change Log
 
+## 2026-11-07 — Handle backend wake-up without losing login
+
+Fixed the API error path that cleared a session when token refresh failed due to
+a temporary outage. Login profile loading also preserves a successfully created
+session on temporary failure. Confirmed invalid credentials still expire sessions;
+a late refresh response cannot restore credentials after logout/account changes.
+
+Added a shared, bounded public readiness probe and illustrated connection screen.
+Login, signup, recovery and session refresh wait for readiness before sending their
+request. Failed GET requests can wait for the backend and retry once. Purchases,
+uploads and other mutations are not automatically replayed after a timeout.
+The connection wait stops after approximately 90 seconds and allows manual retry.
+No credentials are sent to readiness probes and no periodic keep-alive is used.
+
+This improves handling of Render cold starts; it does not disable free hosting's
+sleep policy. Deployment to another host or an always-running plan is separate.
+Added regression coverage for outages, invalid refresh, logout during refresh,
+safe read retries, non-replayed purchases, shared probes and connection deadlines.
+
 ## 2026-11-07 — Remove prototype wording from the website
 
 Removed the “Local prototype” footer label and replaced visible prototype wording
