@@ -1,6 +1,7 @@
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
@@ -10,11 +11,14 @@ settings = get_settings()
 connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+elif settings.SERVERLESS_MODE:
+    connect_args.update(connect_timeout=10, prepare_threshold=None)
 
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args=connect_args,
     pool_pre_ping=True,
+    **({"poolclass": NullPool} if settings.SERVERLESS_MODE and not settings.DATABASE_URL.startswith("sqlite") else {}),
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

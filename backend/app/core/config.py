@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     APP_ENV: str = "development"
+    SERVERLESS_MODE: bool = False
+    CRON_SECRET: SecretStr = Field(default=SecretStr(""), repr=False)
     APP_NAME: str = "JOMO"
     API_PREFIX: str = "/api/v1"
     PORT: int = 8000
@@ -85,6 +87,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_settings(self):
+        if self.SERVERLESS_MODE and self.APP_ENV != "test" and self.DATABASE_URL.startswith("sqlite"):
+            raise ValueError("Vercel requires the persistent Supabase DATABASE_URL, not local SQLite")
         if self.APP_ENV not in ("development", "test"):
             if self.DEV_AUTH_ENABLED:
                 raise ValueError("Development authentication must be disabled outside development/test")

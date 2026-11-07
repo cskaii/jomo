@@ -1,5 +1,41 @@
 # JOMO — Change Log
 
+## 2026-11-07 — Prepare backend migration from Render to Vercel
+
+Added a Vercel Container deployment with Dockerfile.vercel and Container preset,
+preserving native Tesseract, Presidio and the English model. This uses Vercel's
+Container beta rather than pretending the native Python preset installs OS packages.
+Production uses persistent Supabase; serverless SQLite is rejected. Supabase data
+and private photos do not need to move. No deployed URL or secrets were invented.
+
+Added SERVERLESS_MODE: AI initialisation is lazy, the endless retention worker is
+disabled, database connections use NullPool/timeouts and prepared statements are
+disabled for transaction-pooler compatibility. Vercel startup does not migrate the
+database; reviewed SQL/operator migration is a separate explicit step.
+
+Added a Bearer-secret-protected daily retention job with a bounded storage-deletion
+budget and backlog count. CRON_SECRET must contain at least 32 characters; browser
+sessions/query parameters cannot authorise it. Daily cron fits Hobby limits but
+means physical deletion can occur a day after access expiry or later on failure;
+the privacy notice and deployment guide explain this. Updated the notice's provider
+description to Vercel and removed the obsolete Render Blueprint.
+
+See docs/vercel-backend.md for backend Container setup, exact environment variables,
+PORT, daily schedule, database revision checks, frontend BACKEND_API_URL change,
+private-key isolation and hosted acceptance checks. Container runtime is beta and
+still scales down; this migration does not guarantee zero cold starts.
+
+Added regression tests for scheduled-job authentication, bounded cleanup and
+serverless startup without loading AI/launching an endless worker. Local Docker
+CLI is present but its Linux daemon is not running, so a container image build and
+live Vercel deployment cannot be verified here. Hosted OCR/cron/credential checks
+remain required; no hosted project settings were changed.
+
+Verification: full backend suite 167 passed, 5 skipped (disposable hosted-PostgreSQL
+and native Windows Tesseract requirements); frontend TypeScript and changed-page
+ESLint passed. Checked Container config JSON, daily schedule, separate migrations
+and Docker exclusions for private environments, local databases and caches.
+
 ## 2026-11-07 — Handle backend wake-up without losing login
 
 Fixed the API error path that cleared a session when token refresh failed due to

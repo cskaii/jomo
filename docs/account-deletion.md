@@ -1,5 +1,10 @@
 # Account deletion setup
 
+The backend is now prepared for Vercel Container hosting. Configure the private
+Supabase key in the **backend Vercel project**, following [Vercel setup](vercel-backend.md).
+References to Render below describe the previous host; database deletion rules
+and keeping the admin key out of frontend code still apply.
+
 For the current migration head, queued private-photo removal and revision-specific
 SQL order, see [prototype setup](prototype-setup.md). The older account-deletion
 SQL below applies before the prototype migration; do not rerun it on a newer head.

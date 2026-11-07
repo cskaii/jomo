@@ -16,7 +16,7 @@ def queue_photo(db, key):
         db.flush()
 
 
-def cleanup(db, delete_objects=True):
+def cleanup(db, delete_objects=True, time_budget_seconds=None):
     """Run periodically and before private-data reads. Product retention periods, not statutory deadlines."""
     now = datetime.now(timezone.utc)
     db.query(ActivityCheckIn).filter(or_(ActivityCheckIn.expires_at <= now,
@@ -32,7 +32,11 @@ def cleanup(db, delete_objects=True):
     db.query(DataAccessEvent).filter(DataAccessEvent.occurred_at < now - timedelta(days=366)).delete(synchronize_session=False)
     db.commit()
     if delete_objects:
+        import time
+        started = time.monotonic()
         for queued in db.query(StorageDeletion).order_by(StorageDeletion.created_at).limit(30).all():
+            if time_budget_seconds is not None and time.monotonic() - started >= time_budget_seconds:
+                break
             try:
                 StorageService().delete(queued.storage_key)
             except Exception:
