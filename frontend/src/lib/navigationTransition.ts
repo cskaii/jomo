@@ -1,5 +1,5 @@
-export const TAB_TRANSITION_MS = 900;
-export const WELCOME_TRANSITION_MS = 1800;
+export const TAB_TRANSITION_MS = 120;
+export const WELCOME_TRANSITION_MS = 600;
 
 export type NavigationTransition = { route: string; active: boolean; welcomed: boolean };
 export type TransitionEvent = { type: "navigate" | "finish"; route: string };

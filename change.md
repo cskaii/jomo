@@ -1,10 +1,11 @@
 # JOMO — Change Log
 
-## 2026-11-08 — Remove the backend connection overlay
+## 2026-11-08 — Shorten entry and tab transitions
 
-Removed the global “Connecting to JOMO…” screen and its component from the root
-layout at the user's request. Connection retries and session-preservation behaviour
-remain active; normal page loading and error feedback remain available.
+Reduced the deliberate welcome delay from 1.8 seconds to 0.6 seconds and tab
+transitions from 0.9 seconds to 0.12 seconds after the user reported slow entry
+and navigation. Graphical loading feedback remains while real requests run;
+this removes artificial waiting without claiming to eliminate backend cold starts.
 
 ## 2026-11-07 — Prepare backend migration from Render to Vercel
 

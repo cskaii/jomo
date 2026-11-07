@@ -18,8 +18,8 @@ test("a restored session starts with a welcome transition on every app mount", (
   assert.equal(completed.active, false);
   assert.equal(completed.welcomed, true);
   assert.equal(initialTransition(first.route).active, true);
-  assert.equal(WELCOME_TRANSITION_MS, 1800);
-  assert.equal(TAB_TRANSITION_MS, 900);
+  assert.equal(WELCOME_TRANSITION_MS, 600);
+  assert.equal(TAB_TRANSITION_MS, 120);
 });
 
 test("cached Privacy Guardian and preferences still get tab transitions", () => {
