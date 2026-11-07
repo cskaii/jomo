@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Union
-from pydantic import Field, model_validator, field_validator
+from pydantic import Field, SecretStr, model_validator, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     AUTH_ISSUER_URL: str = ""
     AUTH_JWKS_URL: str = ""
     AUTH_PUBLIC_KEY: str = ""
+    SUPABASE_SECRET_KEY: SecretStr = Field(default=SecretStr(""), repr=False)
     AUTH_AUDIENCE: str = "authenticated"
     AUTH_TIMEOUT_SECONDS: float = Field(default=5, gt=0, le=30)
     FRONTEND_URL: str = "http://localhost:3000"

@@ -591,6 +591,89 @@ progress {
 .j-auth .j-panel {
   padding: 32px;
 }
+.j-password-field {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.j-password-entry {
+  position: relative;
+}
+.j-form .j-password-entry input:not([type="checkbox"]) {
+  padding-right: 78px;
+}
+.j-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 36px;
+  min-width: 58px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #465139;
+  cursor: pointer;
+  font-size: 13px;
+}
+.j-password-toggle:hover {
+  background: #ecebdd;
+}
+.j-password-toggle:focus-visible {
+  outline: 2px solid #465139;
+  outline-offset: 2px;
+}
+.j-password-strength {
+  --strength-color: #9e493c;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.j-password-strength[data-score="2"] { --strength-color: #8a661c; }
+.j-password-strength[data-score="3"] { --strength-color: #4e6c43; }
+.j-password-strength[data-score="4"] { --strength-color: #2e6246; }
+.j-password-strength meter {
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: #e5e3d9;
+}
+.j-password-strength meter::-webkit-meter-bar {
+  background: #e5e3d9;
+  border: 0;
+  border-radius: 12px;
+  height: 10px;
+}
+.j-password-strength meter::-webkit-meter-optimum-value,
+.j-password-strength meter::-webkit-meter-suboptimum-value,
+.j-password-strength meter::-webkit-meter-even-less-good-value {
+  background: var(--strength-color);
+  border-radius: 12px;
+}
+.j-password-strength meter::-moz-meter-bar {
+  background: var(--strength-color);
+  border-radius: 12px;
+}
+.j-password-label {
+  color: var(--strength-color);
+  font-size: 13px;
+  font-weight: 600;
+}
+.j-password-field .j-password-rules,
+.j-password-field .j-password-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.j-password-field small {
+  color: #66685b;
+  font-size: 12px;
+  line-height: 1.55;
+}
 .j-hero {
   padding: 32px;
   border-radius: 30px;

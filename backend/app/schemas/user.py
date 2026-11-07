@@ -1,7 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
+
+
+class DeleteAccountRequest(BaseModel):
+    confirmation: Literal["DELETE"]
+    password: SecretStr = Field(min_length=1, max_length=1024)
+    model_config = {"extra": "forbid"}
 
 
 class UserProfileResponse(BaseModel):

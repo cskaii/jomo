@@ -3,10 +3,12 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, SecretStr
 from app.api.dependencies import CurrentUser
 from app.core.config import get_settings
+from app.core.password_policy import MIN_LENGTH, MAX_BYTES, validate_new_password
 from app.schemas.common import ResponseEnvelope, SuccessStatus
 from app.services.auth_service import AuthService
 from app.utils.response import wrap_response
 from uuid import uuid4
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -15,7 +17,8 @@ class Credentials(BaseModel):
     password: SecretStr = Field(min_length=1, max_length=1024)
 
 class Registration(Credentials):
-    password: SecretStr = Field(min_length=8, max_length=1024)
+    password: SecretStr = Field(min_length=MIN_LENGTH, max_length=MAX_BYTES,
+        description=f"At least {MIN_LENGTH} Unicode characters, at most {MAX_BYTES} UTF-8 bytes; must pass JOMO's guessability check.")
 
 class RefreshInput(BaseModel):
     refresh_token: SecretStr = Field(min_length=1, max_length=8192)
@@ -24,7 +27,8 @@ class EmailInput(BaseModel):
     email: str = Field(min_length=3, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 class PasswordInput(BaseModel):
-    password: SecretStr = Field(min_length=8, max_length=1024)
+    password: SecretStr = Field(min_length=MIN_LENGTH, max_length=MAX_BYTES,
+        description=f"At least {MIN_LENGTH} Unicode characters, at most {MAX_BYTES} UTF-8 bytes; must pass JOMO's guessability check.")
 
 class SessionResponse(BaseModel):
     access_token: str
@@ -62,6 +66,7 @@ async def login(request: Request, payload: Credentials):
 
 @router.post("/register", response_model=ResponseEnvelope[RegistrationResponse])
 async def register(request: Request, payload: Registration):
+    await run_in_threadpool(validate_new_password, payload.password.get_secret_value(), payload.email)
     data = await AuthService().call("POST", "signup", {"email": payload.email, "password": payload.password.get_secret_value()}, params={"redirect_to": f"{get_settings().FRONTEND_URL.rstrip('/')}/login"})
     return wrap_response(RegistrationResponse(session=session_response(data) if data.get("access_token") else None, message="Check your email to confirm your account, then sign in."), request)
 
@@ -85,5 +90,6 @@ async def recover(request: Request, payload: EmailInput):
 
 @router.post("/password", response_model=ResponseEnvelope[SuccessStatus])
 async def password(request: Request, payload: PasswordInput, current_user: CurrentUser):
+    await run_in_threadpool(validate_new_password, payload.password.get_secret_value(), current_user.email or "")
     await AuthService().call("PUT", "user", {"password": payload.password.get_secret_value()}, token=request.headers["authorization"].split()[1])
     return wrap_response(SuccessStatus(message="Password updated. You can sign in now."), request)

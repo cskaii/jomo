@@ -164,15 +164,17 @@ export function Empty({ children }: { children: ReactNode }) {
 export function Submit({
   pending,
   children,
+  disabled = false,
 }: {
   pending: boolean;
   children: ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       className="j-button"
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
     >
       {pending ? "Please wait…" : children}

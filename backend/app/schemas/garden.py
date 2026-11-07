@@ -57,7 +57,7 @@ class GardenPlaceItemRequest(BaseModel):
 class PointTransactionResponse(BaseModel):
     id: UUID
     garden_id: UUID
-    user_id: UUID
+    user_id: Optional[UUID] = None
     activity_participant_id: Optional[UUID] = None
     transaction_type: PointTransactionType
     amount: int

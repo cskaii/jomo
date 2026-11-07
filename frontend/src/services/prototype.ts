@@ -169,7 +169,7 @@ export const inventory = z.object({
 export const ledger = z.object({
   id,
   garden_id: id,
-  user_id: id,
+  user_id: id.nullable(),
   activity_participant_id: id.nullable().optional(),
   transaction_type: z.enum(["earn", "spend", "adjustment", "refund"]),
   amount: z.number(),
@@ -301,11 +301,13 @@ export async function request<S extends z.ZodType>(
   path: string,
   method: "get" | "post" | "patch" | "delete" = "get",
   data?: unknown,
+  options?: { timeout?: number },
 ): Promise<z.infer<S>> {
   const response = await apiClient.request<unknown>({
     url: path,
     method,
     data,
+    ...options,
   });
   const envelope = z
     .object({ data: z.unknown(), request_id: z.string() })

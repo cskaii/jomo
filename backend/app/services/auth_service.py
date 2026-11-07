@@ -27,6 +27,13 @@ class AuthService:
         if response.status_code == 429:
             raise HTTPException(429, detail={"code": "AUTH_RATE_LIMITED", "message": "Too many authentication attempts. Please wait before retrying."})
         if response.status_code >= 400:
+            if path in ("signup", "user"):
+                try:
+                    rejected = response.json()
+                except ValueError:
+                    rejected = {}
+                if isinstance(rejected, dict) and (rejected.get("error_code") == "weak_password" or rejected.get("code") == "weak_password"):
+                    raise HTTPException(400, detail={"code": "WEAK_PASSWORD", "message": "This password does not meet the account's password protection settings. Choose another unique password."})
             raise HTTPException(401 if path == "token" else 400, detail={"code": "AUTH_REJECTED", "message": "Sign-in was not accepted. Check your email, password and email confirmation." if path == "token" else "The authentication request was not accepted. Check your details or try again later."})
         if not response.content:
             return {}
