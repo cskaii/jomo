@@ -22,6 +22,16 @@ These are the configured deployment addresses. New features become available the
 - **Insights:** Views of recorded usage and completed offline activity.
 - **Privacy Guardian:** Explicitly submitted text, images and data files are processed by Microsoft Presidio.
 
+### Loading transitions
+
+Every app entry, including a restored sign-in, shows the personalized seedling welcome for at least 1.8 seconds. Tab and query-based navigation show a 0.9-second page transition even when content is already cached, including Privacy Guardian and preferences. Page requests continue underneath; these visual transitions do not speed up the backend or replace real loading and error states.
+
+### Shared gardens and arranging
+
+Personal and shared gardens use the same immersive garden, store, and collection. Active group members can spend their group's points and plant or move items in its shared collection; personal points and inventory stay separate. Shared gardens refresh every 15 seconds while visible, on return to the tab, or with the refresh button.
+
+Choose **Arrange** to drag a planted item to a new position. Keyboard users can select an item with Tab, use arrow keys to adjust it, Enter to save, and Escape to cancel. Moving never spends coins. Each purchased unit can be planted separately. Backend garden row locks serialize purchases and rewards on PostgreSQL.
+
 ### Privacy Guardian
 
 | Component | Purpose | Supported input |

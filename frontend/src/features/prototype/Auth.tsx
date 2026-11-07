@@ -16,7 +16,7 @@ export function Register() { return <AccountForm registration />; }
 function AccountForm({ registration }: { registration: boolean }) {
   const router = useRouter(), action = useAction();
   const [email, setEmail] = useState(""), [password, setPassword] = useState("");
-  const [welcomeName, setWelcomeName] = useState<string | null>(null);
+  const [welcomeProfile, setWelcomeProfile] = useState<z.infer<typeof profile> | null>(null);
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     // Email confirmation may return an implicit-flow fragment. Do not retain it
@@ -27,14 +27,14 @@ function AccountForm({ registration }: { registration: boolean }) {
     saveSession(session);
     try {
       const me = await request(profile, "/users/me");
-      setWelcomeName(me.display_name);
+      setWelcomeProfile(me);
       await fetchResource("account-profile", async () => me, sessionOwner(session.access_token));
       setEntered(true);
       router.replace("/insights");
     } catch (error) { setEntered(false); clearSession(); throw error; }
   }
   if (action.pending || entered) return <LoadingScene variant="welcome"
-    title={registration && !entered ? "A little room to grow." : welcomeTitle(registration, welcomeName)}
+    title={registration && !entered ? "A little room to grow." : welcomeTitle(registration, welcomeProfile?.display_name, welcomeProfile?.username)}
     description={entered ? "Preparing your little space…" : registration ? "Creating your JOMO account…" : "Opening your little space…"} />;
   return <div className="j-auth">
     <Heading eyebrow="JOMO" title={registration ? "A little room to grow." : "Welcome back."}><p>Less scrolling. More living.</p></Heading>

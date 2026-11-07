@@ -6,7 +6,7 @@ import Link from "next/link";
 import { GardenNavigation } from "./GardenNavigation";
 import { GardenCarousel } from "./GardenCarousel";
 import { GroupGardenManagement } from "./Squads";
-import { PersonalGarden } from "./PersonalGarden";
+import { ImmersiveGarden } from "./ImmersiveGarden";
 import Activities from "./Activities";
 import { gardenHref } from "@/lib/gardenNavigation";
 import { loadGardenDirectory } from "@/services/gardens";
@@ -68,11 +68,11 @@ export default function Garden() {
       ? directory.data.gardens.find((item) => item.garden_type === "personal")
       : undefined
   );
-  if (current?.garden_type === "personal" && params.get("manage") !== "1")
-    return <PersonalGarden key={current.id} garden={current} />;
+  if (current && params.get("manage") !== "1")
+    return <ImmersiveGarden key={current.id} garden={current} />;
   return (
     <>
-      {current?.garden_type === "personal" && <Link className="j-garden-back" href={gardenHref(current.id)}>Back to garden view</Link>}
+      {current && <Link className="j-garden-back" href={gardenHref(current.id)}>Back to garden view</Link>}
       <GardenNavigation
         directory={directory.data}
         current={current}

@@ -62,12 +62,14 @@ class PointsService:
             garden = (
                 self.db.query(Garden)
                 .filter(Garden.garden_type == "group", Garden.owner_group_id == activity.group_id)
+                .populate_existing().with_for_update()
                 .first()
             )
         else:
             garden = (
                 self.db.query(Garden)
                 .filter(Garden.garden_type == "personal", Garden.owner_user_id == participant.user_id)
+                .populate_existing().with_for_update()
                 .first()
             )
 

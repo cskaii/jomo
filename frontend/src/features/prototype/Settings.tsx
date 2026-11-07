@@ -99,6 +99,7 @@ function SettingsForm({
               } catch (error: unknown) {
                 throw new Error(
                   `Your name was saved, but preferences were not confirmed: ${message(error)}`,
+                  { cause: error },
                 );
               }
             }, "Profile and preferences saved. Your intention will appear on Insights.");

@@ -23,7 +23,9 @@ test("welcome uses each account's chosen display name, never a hardcoded person"
   assert.equal(welcomeTitle(false, "  Nur Aisyah  "), "Welcome back, Nur Aisyah.");
   assert.equal(welcomeTitle(false, null), "Welcome back.");
   assert.equal(welcomeTitle(false, ""), "Welcome back.");
-  assert.equal(welcomeTitle(false, "JOMO User edb3c86e"), "Welcome back.");
+  assert.equal(welcomeTitle(false, "JOMO User edb3c86e"), "Welcome back, JOMO User edb3c86e.");
+  assert.equal(welcomeTitle(false, " ", "user_edb3c86e"), "Welcome back, user_edb3c86e.");
+  assert.equal(welcomeTitle(false, "Alex", "user_edb3c86e"), "Welcome back, Alex.");
   assert.equal(welcomeTitle(true, "Alex"), "Welcome to your little space.");
 });
 

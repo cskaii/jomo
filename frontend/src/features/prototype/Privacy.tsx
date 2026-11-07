@@ -146,8 +146,8 @@ export default function Privacy() {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.detections.map((item, index) => (
-                    <tr key={`${item.start}-${index}`}>
+                  {result.detections.map(item => (
+                    <tr key={`${item.entity_type}-${item.start}-${item.end}`}>
                       <td>{item.entity_type}</td>
                       <td>
                         {item.start}–{item.end} (end exclusive)
@@ -177,8 +177,8 @@ export default function Privacy() {
             Copy redacted draft
           </button>
           <ul>
-            {result.limitations.map((value, index) => (
-              <li key={index}>{value}</li>
+            {result.limitations.map(value => (
+              <li key={value}>{value}</li>
             ))}
           </ul>
           <p>

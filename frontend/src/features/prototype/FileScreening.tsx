@@ -122,7 +122,7 @@ export default function FileScreening({ kind }: { kind: "image" | "structured" }
             unoptimized style={{ width: "100%", height: "auto", maxHeight: 600, objectFit: "contain" }} />
         : <pre className="j-output" style={{ maxHeight: 400, overflow: "auto", whiteSpace: "pre-wrap" }}>{result.content}</pre>}
       <p><button type="button" className="j-button" onClick={() => download(result)}>Download redacted {result.format === "image" ? "image" : "file"}</button></p>
-      <ul>{result.limitations.map((limitation, index) => <li key={index}>{limitation}</li>)}</ul>
+      <ul>{result.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>
     </section>}
   </Panel>;
 }

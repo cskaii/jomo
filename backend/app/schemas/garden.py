@@ -50,8 +50,8 @@ class GardenPurchaseRequest(BaseModel):
 
 
 class GardenPlaceItemRequest(BaseModel):
-    position_x: float
-    position_y: float
+    position_x: float = Field(ge=0, le=100, allow_inf_nan=False)
+    position_y: float = Field(ge=0, le=100, allow_inf_nan=False)
 
 
 class PointTransactionResponse(BaseModel):

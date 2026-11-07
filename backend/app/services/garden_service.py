@@ -15,8 +15,12 @@ class GardenService:
     def __init__(self, db: Session):
         self.db = db
 
-    def check_garden_access(self, user_id: uuid.UUID, garden_id: uuid.UUID) -> Garden:
-        garden = self.db.query(Garden).filter(Garden.id == garden_id).first()
+    def check_garden_access(self, user_id: uuid.UUID, garden_id: uuid.UUID, *, for_update: bool = False) -> Garden:
+        query = self.db.query(Garden).filter(Garden.id == garden_id)
+        if for_update:
+            # Serialize purchases/planting against this garden's shared balance and inventory.
+            query = query.populate_existing().with_for_update()
+        garden = query.first()
         if not garden:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -174,7 +178,7 @@ class GardenService:
         catalog_item_id: uuid.UUID,
         quantity: int = 1,
     ) -> None:
-        garden = self.check_garden_access(user_id, garden_id)
+        garden = self.check_garden_access(user_id, garden_id, for_update=True)
         catalog_item = (
             self.db.query(GardenCatalogItem)
             .filter(GardenCatalogItem.id == catalog_item_id, GardenCatalogItem.is_active.is_(True))
@@ -217,7 +221,12 @@ class GardenService:
         # Add or update inventory
         existing_item = (
             self.db.query(GardenItem)
-            .filter(GardenItem.garden_id == garden.id, GardenItem.catalog_item_id == catalog_item.id)
+            .filter(
+                GardenItem.garden_id == garden.id,
+                GardenItem.catalog_item_id == catalog_item.id,
+                GardenItem.position_x.is_(None),
+                GardenItem.position_y.is_(None),
+            )
             .first()
         )
         if existing_item:
@@ -240,10 +249,11 @@ class GardenService:
         position_x: float,
         position_y: float,
     ) -> None:
-        self.check_garden_access(user_id, garden_id)
+        self.check_garden_access(user_id, garden_id, for_update=True)
         item = (
             self.db.query(GardenItem)
             .filter(GardenItem.id == item_id, GardenItem.garden_id == garden_id)
+            .populate_existing()
             .first()
         )
         if not item:
@@ -251,6 +261,15 @@ class GardenService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"code": "ITEM_NOT_IN_INVENTORY", "message": "Item is not in garden inventory."},
             )
+
+        # One click plants one unit, retaining any remaining units in the collection.
+        if item.quantity > 1:
+            self.db.add(GardenItem(
+                garden_id=garden_id,
+                catalog_item_id=item.catalog_item_id,
+                quantity=item.quantity - 1,
+            ))
+            item.quantity = 1
 
         item.position_x = position_x
         item.position_y = position_y
