@@ -26,12 +26,12 @@ async def lifespan(app: FastAPI):
     elif settings.APP_ENV == "test" and engine.dialect.name == "sqlite":
         Base.metadata.create_all(bind=engine)
     logger.info("Database engine initialized; readiness is checked at /api/health.")
-    if settings.AI_PRESIDIO_ENABLED:
+    if settings.AI_PRESIDIO_ENABLED and not settings.SERVERLESS_MODE:
         from starlette.concurrency import run_in_threadpool
         from app.ai.screening_service import get_screening_provider
         await run_in_threadpool(get_screening_provider)
     task = None
-    if settings.APP_ENV != "test":
+    if settings.APP_ENV != "test" and not settings.SERVERLESS_MODE:
         from app.db.session import SessionLocal
         from app.services.retention_service import cleanup
         from starlette.concurrency import run_in_threadpool

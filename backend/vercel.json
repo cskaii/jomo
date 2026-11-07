@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "container",
+  "crons": [
+    { "path": "/api/v1/internal/retention", "schedule": "0 19 * * *" }
+  ]
+}

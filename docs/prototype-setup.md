@@ -1,5 +1,10 @@
 # Complete prototype: deployment and verification
 
+**Current hosting: Vercel backend Container.** Follow [Vercel backend migration](vercel-backend.md)
+for runtime, environment and daily cleanup setup. Render-specific instructions and
+the persistent 60-second worker below describe the previous hosting arrangement.
+The database revision and private-bucket SQL instructions remain applicable.
+
 The implementation is local until the code is deployed. No live Supabase,
 Render or Vercel settings were changed. Read [PDPA readiness](pdpa-readiness.md)
 before opening the prototype to public users.

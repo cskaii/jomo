@@ -33,7 +33,7 @@ identifiers and does not certify content as safe.
    activities, consent/security records, inactivity and any legal holds. Stop retaining
    identifiable data when no longer reasonably required. The chosen 366-day access
    metadata period is not a blanket statutory obligation.
-3. **Providers/overseas transfers:** verify actual Supabase, Render and Vercel regions,
+3. **Providers/overseas transfers:** verify actual Supabase and Vercel regions,
    contracts/DPA terms, subprocessors, support access, comparable protection and
    backup arrangements. A Singapore hosting region alone does not establish all
    transfers are compliant. Make the public notice match the actual arrangements.
