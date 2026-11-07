@@ -596,6 +596,35 @@ progress {
   gap: 10px;
   min-width: 0;
 }
+.j-notifications, .j-garden-history { position: relative; }
+.j-notifications > summary, .j-garden-history > summary {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 42px; min-width: 42px; cursor: pointer; list-style: none;
+}
+.j-notifications > summary::-webkit-details-marker, .j-garden-history > summary::-webkit-details-marker { display: none; }
+.j-notifications > summary span { border-radius: 20px; padding: 2px 6px; background: #465139; color: white; font-size: 11px; }
+.j-notification-panel, .j-garden-history > section {
+  position: absolute; right: 0; top: 100%; width: min(390px, calc(100vw - 24px));
+  max-height: 70vh; overflow: auto; padding: 22px; border-radius: 18px;
+  background: #fffefa; color: #35402e; border: 1px solid #deddd1;
+  box-shadow: 0 12px 35px #1a291f26; z-index: 110;
+}
+.j-notification-panel h2, .j-garden-history h2 { font-size: 23px; margin-bottom: 10px; }
+.j-notification-panel article { padding: 14px 0; border-top: 1px solid #deddd1; }
+.j-notification-panel article.j-unread { border-left: 3px solid #55794c; padding-left: 10px; }
+.j-notification-panel button, .j-garden-history button { min-height: 36px; padding: 5px 8px; border: 1px solid #d5d8c8; border-radius: 8px; cursor: pointer; }
+.j-garden-history ul { list-style: none; padding: 0; }
+.j-garden-history li { padding: 12px 0; border-bottom: 1px solid #deddd1; }
+.j-garden-history small { display: block; }
+.j-proof-image { width: 100%; max-width: 480px; height: auto; max-height: 360px; object-fit: contain; border-radius: 14px; }
+.j-privacy-notice { max-width: 960px; margin: 50px auto; padding: 24px; }
+.j-privacy-notice li { margin-bottom: 12px; line-height: 1.7; }
+.j-saved-row { background: #e8efdd; }
+.j-game-actions { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .j-notification-panel { position: fixed; right: 12px; top: 76px; }
+  .j-garden-history > section { position: fixed; right: 12px; top: 76px; }
+}
 .j-password-entry {
   position: relative;
 }

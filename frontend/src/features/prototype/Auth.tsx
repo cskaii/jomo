@@ -63,6 +63,7 @@ function AccountForm({ registration }: { registration: boolean }) {
         <Submit pending={action.pending} disabled={registration && !strength?.accepted}>{registration ? "Create account" : "Sign in"}</Submit>
         <Feedback action={action} />
       </form>
+      {registration && <p>Creating an account asks JOMO to process your account and activity data for this service. Location and photos are optional. <Link href="/privacy">Read the privacy notice</Link>.</p>}
       <p>{registration ? <Link href="/login">Already have an account? Sign in</Link> : <Link href="/register">Create an account</Link>}</p>
       {!registration && <Link href="/forgot-password">Forgot your password?</Link>}
       {!registration && process.env.NEXT_PUBLIC_DEV_AUTH_ENABLED === "true" && <div className="j-form">

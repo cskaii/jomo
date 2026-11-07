@@ -10,6 +10,16 @@ from app.utils.response import wrap_response
 router = APIRouter(tags=["Friends"])
 
 
+@router.get("/friend-requests")
+async def pending_friend_requests(request: Request, current_user: CurrentUser, db: DbSession):
+    from app.models.friendship import FriendRequest
+    from app.models.user import User
+    rows = db.query(FriendRequest).filter_by(receiver_id=current_user.id, status="pending").all()
+    return wrap_response([{"id": row.id, "sender_id": row.sender_id,
+        "display_name": (db.get(User, row.sender_id).display_name if db.get(User, row.sender_id) else "JOMO member")}
+        for row in rows], request)
+
+
 @router.get("/friends", response_model=ResponseEnvelope[List[FriendResponse]])
 async def list_friends(
     request: Request,

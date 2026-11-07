@@ -36,6 +36,7 @@ class UserPreferencesResponse(BaseModel):
     notifications_enabled: bool
     created_at: datetime
     updated_at: datetime
+    onboarding_completed_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

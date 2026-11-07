@@ -44,6 +44,7 @@ class GroupMemberResponse(BaseModel):
 
 
 class GroupInviteCreateRequest(BaseModel):
+    receiver_id: Optional[UUID] = None
     max_uses: Optional[int] = Field(None, ge=1, le=100)
     expires_in_hours: int = Field(default=72, ge=1, le=720)
 
@@ -57,6 +58,14 @@ class GroupInviteResponse(BaseModel):
     max_uses: Optional[int] = None
     uses_count: int
     created_at: datetime
+
+
+class GroupMemberUpdate(BaseModel):
+    role: str = Field(pattern="^(admin|member)$")
+
+
+class TransferOwnership(BaseModel):
+    user_id: UUID
 
 
 class FriendRequestCreate(BaseModel):

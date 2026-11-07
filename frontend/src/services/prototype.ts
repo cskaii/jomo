@@ -13,6 +13,7 @@ export const profile = z.object({
 });
 export const preferences = z.object({
   user_id: id,
+  onboarding_completed_at: nullable,
   timezone: z.string(),
   language: z.string(),
   daily_screen_goal_minutes: z.number().nullable().optional(),
@@ -288,6 +289,8 @@ export const proof = z.object({
 export const invite = z.object({ invite_token: nullable, expires_at: stamp });
 export const checkIn = z.object({
   check_in_id: id,
+  captured_at: nullable,
+  expires_at: nullable,
   accepted: z.boolean(),
   precision: z.string(),
 });
@@ -341,8 +344,9 @@ export function utc(value: string) {
 export function dateTime(value: string) {
   return new Date(utc(value)).toLocaleString();
 }
-export function localDate() {
+export function localDate(timezone?: string) {
   const now = new Date();
+  if (timezone) return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 export { z };

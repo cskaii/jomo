@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.api.v1.privacy_notice import router as privacy_notice_router
 from app.schemas.common import ErrorEnvelope
 from app.api.v1 import (
     auth,
@@ -30,6 +31,7 @@ api_router = APIRouter(responses={
 })
 
 api_router.include_router(auth.router)
+api_router.include_router(privacy_notice_router)
 api_router.include_router(users.router)
 api_router.include_router(insights.router)
 api_router.include_router(friends.router)

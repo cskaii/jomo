@@ -29,6 +29,18 @@ class Settings(BaseSettings):
 
     STORAGE_PROVIDER: str = "supabase"
     STORAGE_BUCKET: str = "activity-proofs"
+    STORAGE_TIMEOUT_SECONDS: float = Field(default=15, gt=0, le=30)
+    PROOF_RETENTION_DAYS: int = Field(default=7, ge=1, le=30)
+    PRIVACY_CONTACT_EMAIL: str = ""
+    PRIVACY_ORGANISATION: str = "The JOMO operator"
+
+    @field_validator("PRIVACY_CONTACT_EMAIL")
+    @classmethod
+    def privacy_contact(cls, value):
+        import re
+        if value and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value):
+            raise ValueError("PRIVACY_CONTACT_EMAIL must be a valid contact email")
+        return value
 
     CORS_ORIGINS: Union[str, List[str]] = "http://localhost:3000,http://127.0.0.1:3000"
     REQUEST_MAX_BODY_BYTES: int = Field(default=3 * 1024 * 1024, ge=1)

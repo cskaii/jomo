@@ -792,5 +792,58 @@ END $$;
 
 UPDATE alembic_version SET version_num='c8e31a04d912' WHERE alembic_version.version_num = 'b7d210c42f01';
 
+-- Running upgrade c8e31a04d912 -> d91e7c20b403
+
+ALTER TABLE user_preferences ADD COLUMN onboarding_completed_at TIMESTAMP WITH TIME ZONE;
+
+ALTER TABLE group_invites ADD COLUMN receiver_id UUID;
+
+ALTER TABLE group_invites ADD CONSTRAINT fk_group_invite_receiver FOREIGN KEY(receiver_id) REFERENCES users (id) ON DELETE CASCADE;
+
+CREATE TABLE storage_deletions (
+    storage_key VARCHAR(200) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    attempts INTEGER NOT NULL,
+    PRIMARY KEY (storage_key)
+);
+
+CREATE TABLE data_access_events (
+    id UUID NOT NULL,
+    subject_user_id UUID NOT NULL,
+    actor_user_id UUID,
+    purpose VARCHAR(40) NOT NULL,
+    resource_id UUID NOT NULL,
+    occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(subject_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY(actor_user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE INDEX ix_data_access_events_subject_user_id ON data_access_events (subject_user_id);
+
+
+CREATE OR REPLACE FUNCTION public.jomo_queue_proof_deletion()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF OLD.storage_key IS NOT NULL THEN
+    IF TG_OP = 'DELETE' THEN
+      INSERT INTO public.storage_deletions(storage_key, created_at, attempts)
+        VALUES (OLD.storage_key, now(), 0) ON CONFLICT (storage_key) DO NOTHING;
+    ELSIF OLD.storage_key IS DISTINCT FROM NEW.storage_key THEN
+      INSERT INTO public.storage_deletions(storage_key, created_at, attempts)
+        VALUES (OLD.storage_key, now(), 0) ON CONFLICT (storage_key) DO NOTHING;
+    END IF;
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.jomo_queue_proof_deletion() FROM PUBLIC;
+CREATE TRIGGER jomo_queue_proof_deletion BEFORE DELETE OR UPDATE OF storage_key
+ON public.proof_submissions FOR EACH ROW EXECUTE FUNCTION public.jomo_queue_proof_deletion();
+ALTER TABLE public.storage_deletions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.data_access_events ENABLE ROW LEVEL SECURITY;
+
+
+UPDATE alembic_version SET version_num='d91e7c20b403' WHERE alembic_version.version_num = 'c8e31a04d912';
+
 COMMIT;
 

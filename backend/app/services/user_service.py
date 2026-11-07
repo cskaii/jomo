@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from app.models.user import User, UserPreference
 from app.models.garden import Garden
 from app.schemas.user import UserProfileUpdateRequest, UserPreferencesUpdateRequest
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 class UserService:
@@ -72,6 +73,10 @@ class UserService:
     def update_preferences(self, user_id: uuid.UUID, data: UserPreferencesUpdateRequest) -> UserPreference:
         prefs = self.get_or_create_preferences(user_id)
         if data.timezone is not None:
+            try:
+                ZoneInfo(data.timezone)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise HTTPException(400, detail={"code": "INVALID_TIMEZONE", "message": "Choose a valid time zone."}) from None
             prefs.timezone = data.timezone
         if data.language is not None:
             prefs.language = data.language
@@ -79,6 +84,13 @@ class UserService:
             prefs.daily_screen_goal_minutes = data.daily_screen_goal_minutes
         if data.location_enabled is not None:
             prefs.location_enabled = data.location_enabled
+            if not data.location_enabled:
+                from app.models.location import ActivityCheckIn
+                from app.models.activity import ActivityParticipant
+                from app.models.consent import ConsentRecord
+                participant_ids = self.db.query(ActivityParticipant.id).filter_by(user_id=user_id)
+                self.db.query(ActivityCheckIn).filter(ActivityCheckIn.participant_id.in_(participant_ids)).delete(synchronize_session=False)
+                self.db.add(ConsentRecord(user_id=user_id, purpose="activity_location", policy_version="2026-11-07", granted=False))
         if data.screening_enabled is not None:
             prefs.screening_enabled = data.screening_enabled
         if data.notifications_enabled is not None:

@@ -3,6 +3,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from fastapi import HTTPException
+from app.utils.user_time import user_today
 
 from app.models.usage import UsageSummary
 from app.schemas.usage import UsageRecordCreate, UsageSummaryResponse
@@ -18,20 +20,11 @@ class UsageService:
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
     ) -> UsageSummaryResponse:
-        today = date.today()
+        today = user_today(self.db, user_id)
         start = from_date or (today - timedelta(days=6))
         end = to_date or today
 
-        records = (
-            self.db.query(UsageSummary)
-            .filter(
-                UsageSummary.user_id == user_id,
-                UsageSummary.usage_date >= start,
-                UsageSummary.usage_date <= end,
-            )
-            .order_by(UsageSummary.usage_date.asc())
-            .all()
-        )
+        records = self.get_daily_records(user_id, start, end)
 
         total_min = sum(r.total_minutes for r in records)
         social_min = sum(r.social_minutes or 0 for r in records)
@@ -54,20 +47,23 @@ class UsageService:
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
     ) -> List[UsageSummary]:
-        today = date.today()
+        today = user_today(self.db, user_id)
         start = from_date or (today - timedelta(days=14))
         end = to_date or today
 
-        return (
-            self.db.query(UsageSummary)
-            .filter(
-                UsageSummary.user_id == user_id,
-                UsageSummary.usage_date >= start,
-                UsageSummary.usage_date <= end,
-            )
-            .order_by(UsageSummary.usage_date.desc())
-            .all()
-        )
+        if start > end or (end - start).days > 366:
+            raise HTTPException(400, detail={"code": "INVALID_RANGE", "message": "Choose a date range of up to one year."})
+        rows = self.db.query(UsageSummary).filter(
+            UsageSummary.user_id == user_id, UsageSummary.usage_date >= start,
+            UsageSummary.usage_date <= end,
+        ).order_by(UsageSummary.updated_at.desc(), UsageSummary.id).all()
+        # A manual correction takes precedence. Count each recorded date once.
+        selected = {}
+        for row in rows:
+            if row.usage_date not in selected or (row.source == "manual" and selected[row.usage_date].source != "manual"):
+                selected[row.usage_date] = row
+        return [selected[key] for key in sorted(selected)]
+
 
     def get_category_breakdown(
         self,
@@ -84,6 +80,10 @@ class UsageService:
         return totals
 
     def record_usage(self, user_id: uuid.UUID, data: UsageRecordCreate) -> UsageSummary:
+        if data.usage_date > user_today(self.db, user_id):
+            raise HTTPException(400, detail={"code": "FUTURE_USAGE", "message": "Screen time cannot be logged for a future date."})
+        if data.category_breakdown is None and data.social_minutes is not None:
+            data.category_breakdown = {"social": data.social_minutes, "other": data.total_minutes - data.social_minutes}
         existing = (
             self.db.query(UsageSummary)
             .filter(
@@ -117,3 +117,12 @@ class UsageService:
     def import_records(self, user_id: uuid.UUID, records: List[UsageRecordCreate]) -> None:
         for r in records:
             self.record_usage(user_id, r)
+
+    def delete_record(self, user_id, record_id):
+        record = self.db.query(UsageSummary).filter_by(id=record_id, user_id=user_id).first()
+        if not record:
+            raise HTTPException(404, detail={"code": "USAGE_NOT_FOUND", "message": "Screen-time entry not found."})
+        if record.source != "manual":
+            raise HTTPException(409, detail={"code": "SOURCE_READ_ONLY", "message": "Only manually entered records can be removed here."})
+        self.db.delete(record)
+        self.db.commit()

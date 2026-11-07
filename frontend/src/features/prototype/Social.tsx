@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useState } from "react";
+import { GroupManagement, FriendRequests, GroupInvitations } from "./GroupManagement";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ArrowRight, UserPlus, Leaf, Sprout } from "lucide-react";
 import { PlanActivityDialog } from "./PlanActivityDialog";
@@ -7,6 +8,7 @@ import { SharedGardenPreview } from "./SharedGardenPreview";
 import { useParams, useRouter } from "next/navigation";
 import {
   request,
+  profile,
   group,
   friend,
   member,
@@ -37,6 +39,11 @@ export default function Friends() {
   const view = useResource(loadSocial),
     action = useAction(),
     friendAction = useAction();
+  const refreshSocial = view.refresh;
+  useEffect(() => {
+    window.addEventListener("jomo:social-updated", refreshSocial);
+    return () => window.removeEventListener("jomo:social-updated", refreshSocial);
+  }, [refreshSocial]);
   const [token, setToken] = useState(""),
     [friendId, setFriendId] = useState("");
   if (!view.data)
@@ -62,6 +69,8 @@ export default function Friends() {
         A little more connection, a little less scrolling. Your real friends and
         private groups live here.
       </p>
+      <FriendRequests />
+      <GroupInvitations />
       <div className="j-two">
         <div>
           {view.data.friends.length ? (
@@ -179,8 +188,8 @@ export default function Friends() {
                       .parse(token);
                     await request(
                       success,
-                      `/group-invites/${encodeURIComponent(clean)}/accept`,
-                      "post",
+                      "/group-invites/accept",
+                      "post", { token: clean },
                     );
                     setToken("");
                     view.refresh();
@@ -285,15 +294,16 @@ export function GroupDetails() {
   const { groupId } = useParams<{ groupId: string }>(),
     router = useRouter();
   const load = useCallback(async () => {
-    const [details, members, activities] = await Promise.all([
+    const [details, members, activities, me] = await Promise.all([
       request(group, `/groups/${groupId}`),
       request(member.array(), `/groups/${groupId}/members`),
       request(
         activity.array(),
         `/activities?group_id=${encodeURIComponent(groupId)}`,
       ),
+      request(profile, "/users/me"),
     ]);
-    return { details, members, activities };
+    return { details, members, activities, me };
   }, [groupId]);
   const view = useResource(load),
     action = useAction(),
@@ -386,7 +396,7 @@ export function GroupDetails() {
           </p>
           <button
             className="j-button"
-            disabled={action.pending}
+            disabled={action.pending || !view.data.members.some(person => person.user_id === view.data?.me.id && ["owner", "admin"].includes(person.role))}
             onClick={() =>
               void action.run(async () => {
                 const response = await request(
@@ -439,6 +449,7 @@ export function GroupDetails() {
           </Link>
         </Panel>
       </div>
+      <GroupManagement groupId={groupId} />
       <details className="j-panel">
         <summary>Leave this group</summary>
         <p>

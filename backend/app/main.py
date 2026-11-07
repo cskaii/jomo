@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import asyncio
+from contextlib import suppress
 from fastapi import FastAPI
 
 from app.core.config import get_settings
@@ -28,7 +30,29 @@ async def lifespan(app: FastAPI):
         from starlette.concurrency import run_in_threadpool
         from app.ai.screening_service import get_screening_provider
         await run_in_threadpool(get_screening_provider)
-    yield
+    task = None
+    if settings.APP_ENV != "test":
+        from app.db.session import SessionLocal
+        from app.services.retention_service import cleanup
+        from starlette.concurrency import run_in_threadpool
+        def run_cleanup():
+            with SessionLocal() as db:
+                cleanup(db)
+        async def retention_worker():
+            while True:
+                try:
+                    await run_in_threadpool(run_cleanup)
+                except Exception:
+                    logger.error("Retention cleanup failed; retry scheduled. No private values logged.")
+                await asyncio.sleep(60)
+        task = asyncio.create_task(retention_worker())
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
     logger.info("Shutting down JOMO application...")
 
 

@@ -11,6 +11,7 @@ from app.models.points import PointTransaction
 from app.models.notification import Notification
 from app.models.consent import ConsentRecord
 from app.models.screening import ScreeningEvent
+from app.models.retention import StorageDeletion, DataAccessEvent
 from app.models.progression import (
     UserProgression, XpTransaction, Quest, UserQuestInstance, QuestFavorite,
     MissionDefinition, UserMission, AchievementDefinition, UserAchievement,

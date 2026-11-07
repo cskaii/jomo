@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional, Dict, Any, List
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from app.core.enums import UsageSource
 
 
@@ -11,6 +11,17 @@ class UsageRecordCreate(BaseModel):
     social_minutes: Optional[int] = Field(None, ge=0, le=1440)
     category_breakdown: Optional[Dict[str, int]] = None
     source: UsageSource = UsageSource.MANUAL
+
+    @model_validator(mode="after")
+    def validate_totals(self):
+        if self.social_minutes is not None and self.social_minutes > self.total_minutes:
+            raise ValueError("Social minutes cannot exceed total screen time")
+        if self.category_breakdown is not None:
+            if len(self.category_breakdown) > 30 or any(not key or len(key) > 50 or not isinstance(value, int) or value < 0 for key, value in self.category_breakdown.items()):
+                raise ValueError("Invalid category breakdown")
+            if sum(self.category_breakdown.values()) > self.total_minutes:
+                raise ValueError("Category minutes cannot exceed total screen time")
+        return self
 
 
     @field_validator("source")

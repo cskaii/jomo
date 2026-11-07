@@ -12,6 +12,7 @@ class DetectionItem(BaseModel):
 
 
 class ScreenTextRequest(BaseModel):
+    consent: bool = False
     text: str = Field(..., min_length=1, max_length=10000)
     checks: List[Literal["pii", "harmful_content"]] = Field(default_factory=lambda: ["pii", "harmful_content"], min_length=1, max_length=2)
     language: Literal["en"] = "en"

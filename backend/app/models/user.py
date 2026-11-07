@@ -26,6 +26,7 @@ class UserPreference(Base):
     __tablename__ = "user_preferences"
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Singapore", nullable=False)
     language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
     daily_screen_goal_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

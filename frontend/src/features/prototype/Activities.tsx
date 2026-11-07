@@ -1,4 +1,5 @@
 "use client";
+import { ActivityEvidence } from "./ActivityEvidence";
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -6,14 +7,12 @@ import {
   request,
   activity,
   participant,
+  member,
   group,
   profile,
   activityMission,
   session,
   success,
-  proof,
-  checkIn,
-  upload,
   z,
   dateTime,
 } from "@/services/prototype";
@@ -26,6 +25,7 @@ import {
   Heading,
   Empty,
   Submit,
+  useVisibleRefresh,
 } from "./ui";
 async function loadActivities() {
   const items = await request(activity.array(), "/activities");
@@ -146,6 +146,7 @@ export function CreateActivity() {
     [description, setDescription] = useState("");
   const [category, setCategory] = useState(params.get("category") ?? "outdoor"),
     [duration, setDuration] = useState(params.get("minutes") ?? "30");
+  const [evidence, setEvidence] = useState("");
   const [capacity, setCapacity] = useState("10"),
     [groupId, setGroupId] = useState(params.get("group") ?? "");
   return (
@@ -172,7 +173,7 @@ export function CreateActivity() {
                 group_id: groupId || null,
                 visibility: groupId ? "group" : "personal",
                 location_required: false,
-                proof_requirement: groupId ? "group_confirmation" : "none",
+                proof_requirement: evidence || (groupId ? "photo_or_group_confirmation" : "none"),
               });
               router.push(`/activities/${created.id}`);
             });
@@ -236,7 +237,7 @@ export function CreateActivity() {
             Who is this for?
             <select
               value={groupId}
-              onChange={(event) => setGroupId(event.target.value)}
+              onChange={(event) => { setGroupId(event.target.value); setEvidence(""); }}
             >
               <option value="">Just me</option>
               {groups.data?.map((item) => (
@@ -254,11 +255,16 @@ export function CreateActivity() {
               </button>
             </p>
           )}
+          <label>Completion evidence<select value={evidence} onChange={event => setEvidence(event.target.value)}>
+            <option value="">{groupId ? "Photo or group confirmation" : "Self-reported activity time"}</option>
+            <option value="photo">Photo evidence</option>
+            {groupId && <option value="group_confirmation">Group confirmation without a photo</option>}
+          </select></label>
           <p>
             <small>
               {groupId
                 ? "Group confirmation is requested after your activity."
-                : "Personal photo verification needs real storage before rewards can be demonstrated."}{" "}
+                : "Personal completion is self-reported and based on recorded activity time."}{" "}
               Location is optional.
             </small>
           </p>
@@ -280,9 +286,12 @@ export function ActivityDetails() {
       request(participant.array(), `/activities/${activityId}/participants`),
       request(profile, "/users/me"),
     ]);
-    return { item, people, me };
+    const members = item.group_id ? await request(member.array(), `/groups/${item.group_id}/members`) : [];
+    const manager = item.created_by === me.id || members.some(person => person.user_id === me.id && person.status === "active" && ["owner", "admin"].includes(person.role));
+    return { item, people, me, manager };
   }, [activityId]);
   const view = useResource(load);
+  useVisibleRefresh(view.refresh);
   if (!view.data)
     return (
       <ResourceState
@@ -334,7 +343,7 @@ export function ActivityDetails() {
             </button>
           )}
           {item.status === "published" &&
-            (item.group_id || item.created_by === me.id) && (
+            joined && (item.group_id || item.created_by === me.id) && (
               <button
                 className="j-button"
                 disabled={action.pending}
@@ -369,7 +378,7 @@ export function ActivityDetails() {
               Open focus session
             </button>
           )}
-          {active && joined && (
+          {active && joined && view.data.manager && (
             <button
               className="j-button secondary"
               disabled={action.pending}
@@ -440,12 +449,10 @@ export function ActivityDetails() {
         </p>
       </Panel>
       {joined && (
-        <Evidence
+        <ActivityEvidence
           activityId={activityId}
           item={item}
-          enabled={["awaiting_proof", "under_review", "completed"].includes(
-            item.status,
-          )}
+          changed={view.refresh}
         />
       )}
       <Panel title="Completion status">
@@ -456,296 +463,15 @@ export function ActivityDetails() {
         </p>
         <p>
           <small>
-            Completion verification is still being connected for this prototype.
-            Submitted evidence does not guarantee a reward. Check your garden
-            history for confirmed points.
+            Personal activity time is self-reported. Group evidence is reviewed by another eligible participant.
+            Rewards use server-recorded elapsed time, eligibility limits and one transaction per completion.
+            A photo or location alone does not prove completion.
           </small>
         </p>
         <button className="j-button secondary" onClick={view.refresh}>
           Refresh status
         </button>
         <Link href="/garden"> Open garden history →</Link>
-      </Panel>
-    </>
-  );
-}
-function Evidence({
-  activityId,
-  item,
-  enabled,
-}: {
-  activityId: string;
-  item: z.infer<typeof activity>;
-  enabled: boolean;
-}) {
-  const action = useAction(),
-    [consent, setConsent] = useState(false),
-    [file, setFile] = useState<File | null>(null);
-  const [submitted, setSubmitted] = useState<z.infer<typeof proof> | null>(
-      null,
-    ),
-    [peerProof, setPeerProof] = useState("");
-  const [checkedIn, setCheckedIn] = useState(false);
-  return (
-    <>
-      <Panel title="Optional location check-in">
-        <p>
-          One approximate check-in for this activity. No continuous tracking.
-          Stored evidence can be removed below.
-        </p>
-        <label className="j-checkbox">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(event) => setConsent(event.target.checked)}
-          />{" "}
-          I agree to send an approximate activity check-in to JOMO.
-        </label>
-        <div className="j-row">
-          <button
-            className="j-button secondary"
-            disabled={!consent || action.pending || item.status !== "active"}
-            onClick={() =>
-              void action.run(async () => {
-                if (!navigator.geolocation)
-                  throw new Error(
-                    "Location is unavailable. You can continue without sharing it.",
-                  );
-                const position = await new Promise<GeolocationPosition>(
-                  (resolve, reject) =>
-                    navigator.geolocation.getCurrentPosition(
-                      resolve,
-                      () =>
-                        reject(
-                          new Error(
-                            "Location was denied or unavailable. You can continue without it.",
-                          ),
-                        ),
-                      {
-                        enableHighAccuracy: false,
-                        timeout: 10000,
-                        maximumAge: 0,
-                      },
-                    ),
-                );
-                const result = await request(
-                  checkIn,
-                  `/activities/${activityId}/check-ins`,
-                  "post",
-                  {
-                    latitude:
-                      Math.round(position.coords.latitude * 1000) / 1000,
-                    longitude:
-                      Math.round(position.coords.longitude * 1000) / 1000,
-                    accuracy_meters: position.coords.accuracy,
-                    captured_at: new Date(position.timestamp).toISOString(),
-                    consent: true,
-                  },
-                );
-                if (!result.accepted)
-                  throw new Error("The server did not accept this check-in.");
-                setCheckedIn(true);
-              }, "Approximate check-in saved. No ongoing location sharing is active.")
-            }
-          >
-            Share one check-in
-          </button>
-          <button
-            className="j-button secondary"
-            disabled={action.pending}
-            onClick={() =>
-              void action.run(async () => {
-                await request(
-                  success,
-                  `/activities/${activityId}/check-ins/me`,
-                  "delete",
-                );
-                setCheckedIn(false);
-                setConsent(false);
-              }, "Stored check-in removed.")
-            }
-          >
-            Remove my stored check-in
-          </button>
-        </div>
-        {checkedIn && <p>Check-in saved for this visit.</p>}
-        <Feedback action={action} />
-      </Panel>
-      <Panel title="Activity evidence">
-        <p>
-          Prefer a photo of the activity or object. A selfie is not required.
-          Group confirmation is an alternative where permitted.
-        </p>
-        {!enabled && <p>End the activity before submitting evidence.</p>}
-        <div className="j-form">
-          <label>
-            Optional activity photo · JPEG/PNG/WebP, up to 10 MB
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              disabled={action.pending || !enabled}
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <p>
-            <small>
-              Photo would be sent to JOMO storage for review. Private storage
-              access, metadata removal, viewers and retention must be finalized
-              before using real personal photos.
-            </small>
-          </p>
-          <button
-            className="j-button secondary"
-            disabled={
-              !file ||
-              !enabled ||
-              action.pending ||
-              !["photo", "photo_or_group_confirmation"].includes(
-                item.proof_requirement,
-              )
-            }
-            onClick={() =>
-              void action.run(async () => {
-                if (
-                  !file ||
-                  !["image/jpeg", "image/png", "image/webp"].includes(
-                    file.type,
-                  ) ||
-                  file.size < 1 ||
-                  file.size > 10 * 1024 * 1024
-                )
-                  throw new Error(
-                    "Choose a JPEG, PNG or WebP image up to 10 MB.",
-                  );
-                const signed = await request(
-                  upload,
-                  `/activities/${activityId}/proofs/upload-url`,
-                  "post",
-                  {
-                    file_name: file.name,
-                    mime_type: file.type,
-                    file_size_bytes: file.size,
-                  },
-                );
-                if (!/^https:\/\//.test(signed.upload_url))
-                  throw new Error(
-                    "Photo uploads are not connected yet. Your photo was not submitted.",
-                  );
-                const sent = await fetch(signed.upload_url, {
-                  method: "PUT",
-                  headers: { "Content-Type": file.type },
-                  body: file,
-                  credentials: "omit",
-                });
-                if (!sent.ok)
-                  throw new Error("Upload failed. No proof was registered.");
-                setSubmitted(
-                  await request(
-                    proof,
-                    `/activities/${activityId}/proofs`,
-                    "post",
-                    { proof_type: "photo", storage_key: signed.storage_key },
-                  ),
-                );
-              })
-            }
-          >
-            Upload and submit photo
-          </button>
-          {item.group_id &&
-            ["group_confirmation", "photo_or_group_confirmation"].includes(
-              item.proof_requirement,
-            ) && (
-              <button
-                className="j-button"
-                disabled={!enabled || action.pending}
-                onClick={() =>
-                  void action.run(async () => {
-                    setSubmitted(
-                      await request(
-                        proof,
-                        `/activities/${activityId}/proofs`,
-                        "post",
-                        { proof_type: "group_confirmation" },
-                      ),
-                    );
-                  })
-                }
-              >
-                Request group confirmation
-              </button>
-            )}
-          <button
-            className="j-button secondary"
-            disabled={action.pending}
-            onClick={() =>
-              void action.run(async () => {
-                setSubmitted(
-                  await request(proof, `/activities/${activityId}/proofs/me`),
-                );
-              })
-            }
-          >
-            Load my latest proof
-          </button>
-        </div>
-        {submitted && (
-          <div className="j-notice">
-            <p>
-              Proof status: {submitted.status}. This is not a separate reward
-              confirmation.
-            </p>
-            <p className="j-output">Proof reference: {submitted.id}</p>
-            <small>
-              Share this reference with a circle peer if confirmation is
-              pending.
-            </small>
-            <button
-              className="j-button secondary"
-              disabled={action.pending}
-              onClick={() =>
-                void action.run(async () => {
-                  await request(success, `/proofs/${submitted.id}`, "delete");
-                  setSubmitted(null);
-                }, "Proof record removed. Previously awarded rewards are subject to server audit rules.")
-              }
-            >
-              Delete proof record
-            </button>
-          </div>
-        )}
-        {item.group_id && (
-          <form
-            className="j-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void action.run(async () => {
-                const reference = z.string().uuid().parse(peerProof.trim());
-                await request(success, `/proofs/${reference}/confirm`, "post", {
-                  decision: "confirm",
-                  comment: "Confirmed by circle peer",
-                });
-              }, "Confirmation submitted. Refresh participation and garden history for server results.");
-            }}
-          >
-            <label>
-              A peer’s proof reference
-              <input
-                required
-                value={peerProof}
-                onChange={(event) => setPeerProof(event.target.value)}
-              />
-            </label>
-            <p>
-              <small>
-                Confirm only an activity you participated in with this peer.
-                Peer verification is available for local demonstration only.
-              </small>
-            </p>
-            <Submit pending={action.pending}>Confirm peer participation</Submit>
-          </form>
-        )}
-        <Feedback action={action} />
       </Panel>
     </>
   );
