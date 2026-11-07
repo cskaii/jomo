@@ -1,5 +1,11 @@
 # JOMO — Change Log
 
+## 2026-11-08 — Remove the backend connection overlay
+
+Removed the global “Connecting to JOMO…” screen and its component from the root
+layout at the user's request. Connection retries and session-preservation behaviour
+remain active; normal page loading and error feedback remain available.
+
 ## 2026-11-07 — Prepare backend migration from Render to Vercel
 
 Added a Vercel Container deployment with Dockerfile.vercel and Container preset,
