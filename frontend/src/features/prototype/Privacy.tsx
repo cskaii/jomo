@@ -34,7 +34,7 @@ export default function Privacy() {
         </p>
         <p>
           <small>
-            This prototype checks for personal information only. Harmful-content
+            JOMO checks for personal information only. Harmful-content
             screening is not available. A result with no detections is not a
             guarantee of safety.
           </small>
@@ -66,7 +66,7 @@ export default function Privacy() {
                 screening,
                 "/ai/privacy/text",
                 "post",
-                { text: input, checks: ["pii"], language: "en" },
+                { text: input, checks: ["pii"], language: "en", consent: true },
               );
               if (version === generation.current) setResult(response);
             });

@@ -16,6 +16,8 @@ import { EvilDuckGame } from "@/features/privacy-game/EvilDuckGame";
 import { LoadingScene } from "@/components/common/LoadingScene";
 import { PageLoading } from "@/components/common/PageLoading";
 import { useNavigationTransition } from "@/components/common/useNavigationTransition";
+import { NotificationBell } from "@/features/prototype/NotificationBell";
+import { Onboarding } from "@/features/prototype/Onboarding";
 import { welcomeTitle } from "@/lib/loadingCopy";
 const links = [
   ["/insights", "Insights", Leaf],
@@ -35,6 +37,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const transition = useNavigationTransition(`${path}?${params.toString()}`);
   const welcoming = !transition.welcomed || (!account.data && account.loading);
   const transitioning = welcoming || transition.active;
+  const refreshAccount = account.refresh;
+  useEffect(() => {
+    const refresh = () => refreshAccount();
+    window.addEventListener("jomo:profile-updated", refresh);
+    return () => window.removeEventListener("jomo:profile-updated", refresh);
+  }, [refreshAccount]);
   useEffect(() => {
     if (!transitioning) return;
     const overflow = document.body.style.overflow;
@@ -93,6 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="j-account">
+            {account.data && <NotificationBell />}
             <Link className="j-account-name" href="/settings">
               <strong>{account.data?.display_name ?? "Your space"}</strong>
               <span>LESS SCROLLING. MORE LIVING.</span>
@@ -102,7 +111,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href="/settings"
               aria-label="Account settings"
             >
-              {account.data?.display_name.slice(0, 1).toUpperCase() ?? "·"}
+              {account.data?.display_name.slice(0, 1).toUpperCase() ?? "Â·"}
             </Link>
             <Link
               className="j-icon-button"
@@ -130,6 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button className="j-button" onClick={account.refresh}>Retry connection</button>
           <Link href="/login">Sign in</Link>
         </div>}
+        {account.data && <Onboarding />}
         {children}
       </main>
       {account.data && <EvilDuckGame key={account.data.id} userId={account.data.id} />}
@@ -138,9 +148,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Leaf aria-hidden="true" /> A little less online. A little more here.
         </span>
         <div>
-          <span className="j-prototype-label">Local prototype</span>
           <Link href="/privacy-guardian">Privacy Guardian</Link>
           <Link href="/settings">Your preferences</Link>
+          <Link href="/privacy">Privacy notice</Link>
         </div>
       </footer>
       <nav className="j-bottom" aria-label="Mobile navigation">

@@ -104,7 +104,7 @@ class ActivityService:
         return activity
 
     def get_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> Activity:
-        activity = self.db.query(Activity).filter(Activity.id == activity_id).first()
+        activity = self.db.query(Activity).filter(Activity.id == activity_id).populate_existing().with_for_update().first()
         if not activity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -170,6 +170,11 @@ class ActivityService:
 
     def start_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID, client_started_at: Optional[datetime]) -> Activity:
         activity = self.get_activity(user_id, activity_id)
+        caller = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=user_id).first()
+        if not caller or caller.status not in ("joined", "active"):
+            raise HTTPException(403, detail={"code": "PARTICIPATION_REQUIRED", "message": "Join the activity before starting it."})
+        if activity.status == ActivityStatus.ACTIVE.value:
+            return activity
         if activity.status != ActivityStatus.PUBLISHED.value:
             raise HTTPException(409, detail={"code": "INVALID_STATE", "message": "Only a published activity can be started."})
         # Check permissions: Section 8.2: "For a group activity, any active group member can start it... Do not restrict start permission to the creator alone."
@@ -194,6 +199,9 @@ class ActivityService:
         activity.status = ActivityStatus.ACTIVE.value
         activity.started_at = now
 
+        for joined in self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, status="joined").all():
+            joined.status = "active"
+            joined.started_at = now
         # Update or create participant record for caller
         participant = (
             self.db.query(ActivityParticipant)
@@ -232,6 +240,9 @@ class ActivityService:
                     detail={"code": "NOT_GROUP_MEMBER", "message": "Must be group member to join."},
                 )
 
+        already = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=user_id).first()
+        if already and already.status in ("joined", "active"):
+            return already
         # Capacity check
         active_count = (
             self.db.query(ActivityParticipant)
@@ -260,8 +271,9 @@ class ActivityService:
             self.db.add(participant)
         else:
             participant.status = ParticipantStatus.ACTIVE.value if activity.status == ActivityStatus.ACTIVE.value else ParticipantStatus.JOINED.value
-            if not participant.started_at and activity.status == ActivityStatus.ACTIVE.value:
-                participant.started_at = now
+            participant.started_at = now if activity.status == ActivityStatus.ACTIVE.value else None
+            participant.ended_at = None
+            participant.eligible_minutes = 0
 
         self.db.commit()
         self.db.refresh(participant)
@@ -285,8 +297,16 @@ class ActivityService:
             ActivityParticipant.user_id == user_id,
             ActivityParticipant.status == ParticipantStatus.ACTIVE.value,
         ).first()
+        if activity.status in ("awaiting_proof", "completed"):
+            previous = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=user_id).first()
+            if previous and previous.ended_at:
+                return activity
         if not actor:
             raise HTTPException(403, detail={"code": "PARTICIPATION_REQUIRED", "message": "Only an active participant can end the activity."})
+        manager = self.db.query(GroupMember).filter(GroupMember.group_id == activity.group_id,
+            GroupMember.user_id == user_id, GroupMember.status == "active", GroupMember.role.in_(["owner", "admin"])).first() if activity.group_id else None
+        if activity.created_by != user_id and not manager:
+            raise HTTPException(403, detail={"code": "ACTIVITY_MANAGEMENT_REQUIRED", "message": "Only the creator or a group manager can end the shared activity."})
         if activity.status != ActivityStatus.ACTIVE.value:
             raise HTTPException(409, detail={"code": "INVALID_STATE", "message": "Only an active activity can be ended."})
         now = datetime.now(timezone.utc)
@@ -310,6 +330,16 @@ class ActivityService:
                 elapsed_min = max(0, int((ended - started).total_seconds() / 60))
                 p.eligible_minutes = min(elapsed_min, activity.duration_minutes)
 
+        if activity.proof_requirement == "none":
+            from app.services.points_service import PointsService
+            for p in active_participants:
+                p.completed_at = now
+            self.db.flush()
+            for p in active_participants:
+                PointsService(self.db).award_activity_completion_reward(p.id, commit=False)
+        from app.models.focus import FocusSession
+        self.db.query(FocusSession).filter_by(activity_id=activity_id, status="active").update(
+            {"status": "completed", "ended_at": now}, synchronize_session=False)
         self.db.commit()
         self.db.refresh(activity)
         return activity
@@ -346,6 +376,6 @@ class ActivityService:
             # immutable ledger as proof-backed activities.
             self.db.flush()
             from app.services.points_service import PointsService
-            PointsService(self.db).award_activity_completion_reward(participant.id)
+            PointsService(self.db).award_activity_completion_reward(participant.id, commit=False)
         self.db.commit()
 

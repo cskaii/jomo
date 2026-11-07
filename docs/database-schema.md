@@ -1,8 +1,20 @@
 # JOMO — Database Schema Reference
 
-The database models 21 tables implemented via SQLAlchemy 2.0 and migrated with Alembic:
+The current database models 32 application tables, implemented with SQLAlchemy and
+migrated with Alembic to `d91e7c20b403`.
 
-The shared Supabase database was initialized on 6 November 2026 at revision `db98869da4be`. It contains these 21 application tables plus `alembic_version` and four default garden catalogue items. Use `python -m app.db.setup` from `backend/` to migrate/seed/verify, or add `--check-only` for verification without writes. See [db-setup.md](db-setup.md) for connection modes, environment settings and shared-database access boundaries.
+The table list below describes the original core tables; later migrations add
+quests/progression, private-photo deletion retries and photo-access metadata.
+Use `python -m app.db.setup` from `backend/` to migrate/verify, or add `--check-only`
+for read-only verification. Setup does not seed application rows. The live database
+revision has not been checked in this implementation session. See
+[prototype setup](prototype-setup.md) for the existing-database upgrade order.
+
+The latest additions are `storage_deletions` (opaque object keys and retry counts,
+server-only) and `data_access_events` (photo subject/actor, purpose, resource and
+time, server-only). Both have RLS enabled. Private photo bytes live in Storage,
+not PostgreSQL. User preferences add an onboarding acknowledgement timestamp;
+group invitations add an optional recipient ID.
 
 | Table | Purpose | Primary Key | Key Invariants |
 |---|---|---|---|

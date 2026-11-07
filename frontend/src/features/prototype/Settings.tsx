@@ -1,4 +1,5 @@
 "use client";
+import { DataControls } from "./DataControls";
 import { useState } from "react";
 import { clearSession } from "@/services/authSession";
 import {
@@ -89,6 +90,7 @@ function SettingsForm({
               await request(profile, "/users/me", "patch", {
                 display_name: input.name,
               });
+                window.dispatchEvent(new Event("jomo:profile-updated"));
               try {
                 await request(preferences, "/users/me/preferences", "patch", {
                   daily_screen_goal_minutes: input.goal,
@@ -152,7 +154,7 @@ function SettingsForm({
             Enable optional activity check-ins
           </label>
           <small>
-            This preference does not grant browser permission or start tracking.
+            Turning this off removes saved location check-ins and prevents new ones. Browser permission is requested separately.
             Every check-in still requires your action and consent.
           </small>
           <label className="j-checkbox">
@@ -183,6 +185,7 @@ function SettingsForm({
           <Feedback action={action} />
         </form>
       </Panel>
+      <DataControls />
       <DeleteAccount />
     </>
   );

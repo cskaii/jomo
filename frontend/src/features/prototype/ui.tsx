@@ -61,6 +61,16 @@ export function useResource<T>(load: () => Promise<T>, cacheKey?: string) {
     refresh,
   };
 }
+export function useVisibleRefresh(refresh: () => void, interval = 15000) {
+  useEffect(() => {
+    const update = () => { if (document.visibilityState === "visible") refresh(); };
+    const timer = window.setInterval(update, interval);
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", update); document.removeEventListener("visibilitychange", update); };
+  }, [refresh, interval]);
+}
+
 export function useAction() {
   const lock = useRef(false);
   const [pending, setPending] = useState(false),

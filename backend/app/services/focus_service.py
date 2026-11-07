@@ -25,6 +25,9 @@ class FocusService:
                 detail={"code": "PARTICIPANT_NOT_FOUND", "message": "Must join activity before starting focus session."},
             )
 
+        existing = self.db.query(FocusSession).filter_by(participant_id=participant.id, status="active").first()
+        if existing:
+            return existing
         session = FocusSession(
             activity_id=activity_id,
             participant_id=participant.id,
@@ -38,6 +41,8 @@ class FocusService:
 
     def end_session(self, user_id: uuid.UUID, session_id: uuid.UUID) -> FocusSession:
         session = self.get_session(user_id, session_id)
+        if session.status == "completed":
+            return session
         session.status = "completed"
         session.ended_at = datetime.now(timezone.utc)
         self.db.commit()
@@ -45,7 +50,7 @@ class FocusService:
         return session
 
     def get_session(self, user_id: uuid.UUID, session_id: uuid.UUID) -> FocusSession:
-        session = self.db.query(FocusSession).filter(FocusSession.id == session_id).first()
+        session = self.db.query(FocusSession).filter(FocusSession.id == session_id).populate_existing().with_for_update().first()
         if not session:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

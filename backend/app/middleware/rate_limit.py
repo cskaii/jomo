@@ -56,13 +56,13 @@ class RateLimitMiddleware:
         path = request.url.path[len(self.api_prefix):].rstrip("/")
         policy = None
         if request.method == "POST":
-            if path == "/ai/privacy/text":
+            if path in ("/ai/privacy/text", "/ai/privacy/image", "/ai/privacy/structured"):
                 policy = ("screening", 20, 60)
             elif path.startswith("/groups/") and path.endswith("/invites"):
                 policy = ("invites", 10, 3600)
             elif path == "/activities":
                 policy = ("activity_creation", 20, 3600)
-            elif path.startswith("/activities/") and path.endswith("/proofs/upload-url"):
+            elif path.startswith("/activities/") and (path.endswith("/proofs/upload-url") or path.endswith("/proofs/photo")):
                 policy = ("proof_upload", 10, 3600)
             elif path.startswith("/activities/") and path.endswith("/proofs"):
                 policy = ("proof_submission", 10, 3600)

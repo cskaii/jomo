@@ -61,6 +61,8 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "AUTH_UNAVAILABLE": "Authentication is temporarily unavailable.",
                 "ACCOUNT_DELETION_UNAVAILABLE": "Account deletion is unavailable. Please check the setup with the JOMO team or try again later.",
                 "STORAGE_NOT_CONFIGURED": "Photo uploads are not available yet.",
+                "STORAGE_UNAVAILABLE": "Private photo storage is unavailable. Please retry or contact the project operator.",
+                "PRIVACY_SETUP_REQUIRED": "Optional sharing is not enabled until the project operator configures a privacy contact. You can continue without sharing.",
                 "RATE_LIMIT_UNAVAILABLE": "Request limiting is temporarily unavailable.",
                 "SCREENING_UNAVAILABLE": "Microsoft Presidio is temporarily unavailable. Please retry.",
                 "OCR_UNAVAILABLE": "Image screening is unavailable. Check the Presidio and Tesseract installation, then retry.",

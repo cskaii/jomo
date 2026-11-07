@@ -295,8 +295,10 @@ def test_activity_focus_permissions_and_state_transitions(client):
     for suffix in ("", "/participants"):
         assert client.get(f"/api/v1/activities/{activity}{suffix}", headers=outsider).status_code == 403
     assert client.post(f"/api/v1/activities/{activity}/complete", headers=owner).status_code == 409
-    assert client.post(f"/api/v1/activities/{activity}/start", headers=owner, json={}).status_code == 200
-    assert client.post(f"/api/v1/activities/{activity}/start", headers=owner, json={}).status_code == 409
+    started = client.post(f"/api/v1/activities/{activity}/start", headers=owner, json={})
+    assert started.status_code == 200
+    retried = client.post(f"/api/v1/activities/{activity}/start", headers=owner, json={})
+    assert retried.status_code == 200 and retried.json()["data"]["started_at"] == started.json()["data"]["started_at"]
     focus = client.post(f"/api/v1/activities/{activity}/focus-sessions", headers=owner)
     assert focus.status_code == 201
     session = focus.json()["data"]["id"]
@@ -326,13 +328,13 @@ def test_mock_uploads_and_fabricated_photo_proof_are_not_accepted(client):
     activity = create_activity(client, owner)
     response = client.post(f"/api/v1/activities/{activity}/proofs/upload-url", headers=owner,
                            json={"file_name": "photo.jpg", "mime_type": "image/jpeg", "file_size_bytes": 100})
-    assert response.status_code == 501
-    assert response.json()["error"]["code"] == "STORAGE_NOT_CONFIGURED"
+    assert response.status_code == 410
+    assert response.json()["error"]["code"] == "UPLOAD_FLOW_CHANGED"
     client.post(f"/api/v1/activities/{activity}/start", headers=owner, json={})
     client.post(f"/api/v1/activities/{activity}/end", headers=owner)
     response = client.post(f"/api/v1/activities/{activity}/proofs", headers=owner,
                            json={"proof_type": "photo", "storage_key": "fabricated-photo"})
-    assert response.status_code == 501
+    assert response.status_code == 400
 
 
 def test_group_proof_requires_current_membership_and_participation(client):
@@ -355,7 +357,7 @@ def test_group_proof_requires_current_membership_and_participation(client):
         assert client.post(f"/api/v1/proofs/{proof}/confirm", headers=headers,
                            json={"decision": "confirm"}).status_code == 403
     assert client.post(f"/api/v1/proofs/{proof}/confirm", headers=owner,
-                       json={"decision": "confirm"}).status_code == 400
+                       json={"decision": "confirm"}).status_code == 403
     assert client.post(f"/api/v1/proofs/{proof}/confirm", headers=peer,
                        json={"decision": "confirm"}).status_code == 200
     assert client.post(f"/api/v1/proofs/{proof}/confirm", headers=peer,

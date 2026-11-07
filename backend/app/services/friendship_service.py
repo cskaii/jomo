@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from app.models.user import User
 from app.models.friendship import Friendship, FriendRequest
 from app.schemas.group import FriendResponse
+from app.services.notification_service import notify, resolve_notices
 
 
 class FriendshipService:
@@ -44,6 +45,12 @@ class FriendshipService:
                 detail={"code": "SELF_FRIEND_REQUEST", "message": "Cannot send friend request to yourself."},
             )
 
+        if not self.db.get(User, receiver_id):
+            raise HTTPException(404, detail={"code": "USER_NOT_FOUND", "message": "Profile not found."})
+        low, high = sorted([sender_id, receiver_id])
+        self.db.query(User).filter(User.id.in_([low, high])).order_by(User.id).with_for_update().all()
+        if self.db.query(Friendship).filter_by(user_low_id=low, user_high_id=high).first():
+            raise HTTPException(409, detail={"code": "ALREADY_FRIENDS", "message": "You are already friends."})
         # Check existing pending request
         existing = (
             self.db.query(FriendRequest)
@@ -64,12 +71,14 @@ class FriendshipService:
 
         req = FriendRequest(sender_id=sender_id, receiver_id=receiver_id, status="pending")
         self.db.add(req)
+        self.db.flush()
+        notify(self.db, receiver_id, "friend_request", "New friend request", "Someone would like to connect with you.", "/friends", request_id=req.id, sender_id=sender_id)
         self.db.commit()
         self.db.refresh(req)
         return req
 
     def accept_request(self, request_id: uuid.UUID, receiver_id: uuid.UUID) -> None:
-        req = self.db.query(FriendRequest).filter(FriendRequest.id == request_id).first()
+        req = self.db.query(FriendRequest).filter(FriendRequest.id == request_id).populate_existing().with_for_update().first()
         if not req or req.receiver_id != receiver_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -83,21 +92,26 @@ class FriendshipService:
             )
 
         req.status = "accepted"
+        resolve_notices(self.db, receiver_id, "request_id", request_id)
         req.responded_at = datetime.now(timezone.utc)
 
         # Canonical ordering for friendship low < high
         low_id, high_id = sorted([req.sender_id, req.receiver_id])
         friendship = Friendship(user_low_id=low_id, user_high_id=high_id)
         self.db.add(friendship)
+        notify(self.db, req.sender_id, "friend_accepted", "Friend request accepted", "Your friend request was accepted.", "/friends", receiver_id=receiver_id)
         self.db.commit()
 
     def decline_request(self, request_id: uuid.UUID, receiver_id: uuid.UUID) -> None:
-        req = self.db.query(FriendRequest).filter(FriendRequest.id == request_id).first()
+        req = self.db.query(FriendRequest).filter(FriendRequest.id == request_id).populate_existing().with_for_update().first()
         if not req or req.receiver_id != receiver_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"code": "NOT_FOUND", "message": "Friend request not found or not authorised."},
             )
+        if req.status != "pending":
+            raise HTTPException(409, detail={"code": "INVALID_STATE", "message": "This request is no longer pending."})
         req.status = "declined"
+        resolve_notices(self.db, receiver_id, "request_id", request_id)
         req.responded_at = datetime.now(timezone.utc)
         self.db.commit()

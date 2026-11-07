@@ -1,5 +1,9 @@
 # Account deletion setup
 
+For the current migration head, queued private-photo removal and revision-specific
+SQL order, see [prototype setup](prototype-setup.md). The older account-deletion
+SQL below applies before the prototype migration; do not rerun it on a newer head.
+
 The Settings page now includes **Delete account**. Users must enter their current
 password and type `DELETE`. The server uses the authenticated identity; clients
 cannot supply someone else's user ID.

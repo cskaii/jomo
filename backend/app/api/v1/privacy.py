@@ -31,6 +31,9 @@ async def screen_image(request: Request, current_user: CurrentUser, db: DbSessio
     content = await request.body()
     media_type = request.headers.get("content-type", "").split(";")[0].lower()
     result = await run_in_threadpool(FileScreeningService(db).screen_image, current_user.id, content, media_type)
+    from app.models.consent import ConsentRecord
+    db.add(ConsentRecord(user_id=current_user.id, purpose="image_screening", policy_version="2026-11-07", granted=True))
+    db.commit()
     return wrap_response(result, request)
 
 
@@ -44,6 +47,9 @@ async def screen_structured(request: Request, current_user: CurrentUser, db: DbS
         raise HTTPException(415, detail={"code": "UNSUPPORTED_SCREENING_FILE", "message": "Choose a CSV or JSON file with its matching content type."})
     content = await request.body()
     result = await run_in_threadpool(FileScreeningService(db).screen_structured, current_user.id, content, format)
+    from app.models.consent import ConsentRecord
+    db.add(ConsentRecord(user_id=current_user.id, purpose="structured_screening", policy_version="2026-11-07", granted=True))
+    db.commit()
     return wrap_response(result, request)
 
 

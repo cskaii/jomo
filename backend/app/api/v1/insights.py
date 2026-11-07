@@ -1,6 +1,8 @@
 from datetime import date
 from typing import Optional, List, Dict
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Request, Query, HTTPException
+from uuid import UUID
+from app.core.enums import UsageSource
 from app.api.dependencies import CurrentUser, DbSession
 from app.schemas.common import ResponseEnvelope, SuccessStatus
 from app.schemas.usage import UsageRecordCreate, UsageRecordResponse, UsageSummaryResponse
@@ -57,8 +59,16 @@ async def submit_manual_usage(
     db: DbSession,
 ):
     service = UsageService(db)
+    if payload.source != UsageSource.MANUAL:
+        raise HTTPException(400, detail={"code": "INVALID_SOURCE", "message": "This endpoint records manual screen time only."})
     record = service.record_usage(current_user.id, payload)
     return wrap_response(record, request)
+
+
+@router.delete("/records/{record_id}", response_model=ResponseEnvelope[SuccessStatus])
+async def delete_manual_usage(request: Request, record_id: UUID, current_user: CurrentUser, db: DbSession):
+    UsageService(db).delete_record(current_user.id, record_id)
+    return wrap_response(SuccessStatus(message="Screen-time entry deleted."), request)
 
 
 @router.post("/import", response_model=ResponseEnvelope[SuccessStatus])
@@ -69,5 +79,7 @@ async def import_usage_records(
     db: DbSession,
 ):
     service = UsageService(db)
+    for record in payload:
+        record.source = UsageSource.IMPORT
     service.import_records(current_user.id, payload)
     return wrap_response(SuccessStatus(success=True, message=f"Imported {len(payload)} records"), request)

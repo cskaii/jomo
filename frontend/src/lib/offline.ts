@@ -3,7 +3,7 @@ import type { Activity, ActivityParticipant } from "@/types/activity";
 export interface OfflineRecord { id: string; title: string; category: string; minutes: number; date: string; groupId?: string | null }
 
 // Planned duration and focus timers never count as completed offline time.
-export function participationRecords(activities: Activity[], participants: ActivityParticipant[][], userId: string): OfflineRecord[] {
+export function participationRecords(activities: Activity[], participants: ActivityParticipant[][], userId: string, timezone?: string): OfflineRecord[] {
   return activities.flatMap((item, index) => {
     const mine = participants[index]?.find((person) => person.user_id === userId);
     const stamp = mine?.completed_at ?? mine?.ended_at;
@@ -11,7 +11,7 @@ export function participationRecords(activities: Activity[], participants: Activ
     const normalized = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(stamp) ? stamp : `${stamp}Z`;
     const date = new Date(normalized);
     if (!Number.isFinite(date.getTime())) return [];
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const key = timezone ? new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date) : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return [{ id: item.id, title: item.title, category: item.category, minutes: mine.eligible_minutes, date: key, groupId: item.group_id }];
   }).sort((a, b) => b.date.localeCompare(a.date));
 }

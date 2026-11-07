@@ -9,7 +9,7 @@ import { PlanActivityDialog } from "./PlanActivityDialog";
 
 export function TodayOverview() {
   const view = useResource(loadOfflineOverview);
-  const stats = view.data ? offlineStats(view.data.records, localDate()) : null;
+  const stats = view.data ? offlineStats(view.data.records, localDate(view.data.timezone)) : null;
   const intention = 60,
     progress = stats
       ? Math.min(100, Math.round((stats.todayMinutes / intention) * 100))
@@ -22,6 +22,7 @@ export function TodayOverview() {
           <div>
             <p className="j-eyebrow">
               {new Date().toLocaleDateString("en", {
+                timeZone: view.data?.timezone,
                 weekday: "long",
                 day: "numeric",
                 month: "long",

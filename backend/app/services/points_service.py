@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from app.models.points import PointTransaction
 from app.models.garden import Garden
 from app.models.activity import Activity, ActivityParticipant
+from app.services.notification_service import notify
 from app.core.constants import (
     MIN_POINTS_ELIGIBILITY_MINUTES,
     DEFAULT_POINTS_PER_MINUTE,
@@ -37,7 +38,7 @@ class PointsService:
         participant = (
             self.db.query(ActivityParticipant)
             .filter(ActivityParticipant.id == participant_id)
-            .first()
+            .populate_existing().with_for_update().first()
         )
         if not participant:
             return None
@@ -46,6 +47,8 @@ class PointsService:
         if not activity:
             return None
 
+        if participant.status != "completed":
+            raise HTTPException(409, detail={"code": "COMPLETION_REQUIRED", "message": "Rewards require completed participation."})
         # Check idempotency key: Section 8.7: "activity-completion:{activity_participant_id}"
         idempotency_key = f"activity-completion:{participant.id}"
         existing_tx = (
@@ -101,6 +104,7 @@ class PointsService:
         garden.points_balance += points
         garden.updated_at = datetime.now(timezone.utc)
         participant.points_awarded = points
+        notify(self.db, participant.user_id, "reward", "Activity reward confirmed", f"{points} coins were added to the activity's garden.", f"/garden?garden={garden.id}", garden_id=garden.id, activity_id=activity.id)
 
         if commit:
             self.db.commit()

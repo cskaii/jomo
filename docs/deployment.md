@@ -2,6 +2,9 @@
 
 The source is prepared for these services. A successful local build or mocked authentication test does not mean a hosted deployment is live.
 
+For the current prototype upgrade, private photo bucket, Render privacy variables
+and hosted acceptance checks, follow [prototype setup](prototype-setup.md).
+
 ## 1. Supabase
 
 Project URL: `https://dkxbuudvsnsrymitystf.supabase.co`
@@ -12,7 +15,7 @@ For this project, the session-pooler hostname is `aws-0-ap-southeast-2.pooler.su
 
 Create tables with either method:
 
-1. In a **fresh database**, open Supabase SQL Editor and run the entire `supabase/schema.sql` file. It creates 30 application tables, constraints, indexes and row-level security. The only inserted row is Alembic's migration-version bookkeeping; every application table stays empty.
+1. In a **fresh database**, open Supabase SQL Editor and run the entire `supabase/schema.sql` file. It creates 32 application tables, constraints, indexes and row-level security. The only inserted row is Alembic's migration-version bookkeeping; every application table stays empty.
 2. Alternatively, from `backend`, run `.venv/Scripts/python.exe -m app.db.setup` using the supplied environment settings. The command migrates and verifies the database without inserting catalogue or demo data.
 
 Do not run the full initial SQL over existing tables. The setup command refuses unversioned application tables rather than guessing their schema or deleting records. No live records were deleted by the rebuild; populated source SQLite files were excluded from the repository.
@@ -59,7 +62,7 @@ Enter the following environment variables:
 | `FRONTEND_URL` | `https://jomo-xi.vercel.app` |
 | `CORS_ORIGINS` | `https://jomo-xi.vercel.app` |
 
-Render supplies `PORT`; do not hard-code it. No service-role key or JWT signing secret is required: the backend verifies sessions with Supabase Auth's `/user` endpoint. The session pooler is also used for migrations; do not change its port to `6543`.
+Render supplies `PORT`; do not hard-code it. Session verification uses Supabase Auth's `/user` endpoint; account deletion and private photo storage additionally require a backend-only `SUPABASE_SECRET_KEY`. Do not replace the publishable authentication key with this secret. The session pooler is also used for migrations; do not change its port to `6543`.
 
 Render service URL: `https://jomo.onrender.com`. Deployment branch: `main`. Confirm `https://jomo.onrender.com/api/health` returns `healthy` and `database: connected`. The service URL has been supplied by the owner; this session has not verified its live health.
 

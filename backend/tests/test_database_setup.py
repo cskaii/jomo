@@ -18,8 +18,8 @@ def test_setup_migrates_and_is_repeatable(tmp_path):
     first = setup_database(url, allow_sqlite=True)
     second = setup_database(url, allow_sqlite=True)
     assert first == second
-    assert first["tables"] == 30
-    assert first["revision"] == "c8e31a04d912"
+    assert first["tables"] == 32
+    assert first["revision"] == "d91e7c20b403"
     assert first["catalog_items"] == 0
     assert setup_database(url, allow_sqlite=True, check_only=True)["catalog_items"] == 0
 
@@ -76,11 +76,11 @@ def test_postgresql_sql_generation_accepts_encoded_passwords():
     config.attributes["database_url"] = "postgresql+psycopg://test:pass%40word%25@localhost/postgres"
     command.upgrade(config, "head", sql=True)
     sql = output.getvalue()
-    assert sql.count("CREATE TABLE ") == 31  # 30 app tables plus alembic_version
+    assert sql.count("CREATE TABLE ") == 33  # 32 app tables plus alembic_version
     assert "TIMESTAMP WITH TIME ZONE" in sql
     assert "UUID" in sql
     assert "pass" not in sql
-    assert sql.count("ENABLE ROW LEVEL SECURITY") == 31
+    assert sql.count("ENABLE ROW LEVEL SECURITY") == 33
 
 
 def test_migrated_database_enforces_garden_balance_constraint(tmp_path):

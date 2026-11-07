@@ -25,6 +25,8 @@ class PrivacyService:
         self.db = db
 
     def screen_text(self, user_id: UUID, data: ScreenTextRequest) -> ScreenTextResponse:
+        if not data.consent:
+            raise HTTPException(400, detail={"code": "SCREENING_CONSENT_REQUIRED", "message": "Agree to submit this text before screening."})
         text = data.text
         do_pii = "pii" in (data.checks or [])
 
@@ -69,6 +71,8 @@ class PrivacyService:
             result_status="completed",
         )
         self.db.add(audit_event)
+        from app.models.consent import ConsentRecord
+        self.db.add(ConsentRecord(user_id=user_id, purpose="text_screening", policy_version="2026-11-07", granted=True))
         self.db.commit()
 
         return ScreenTextResponse(

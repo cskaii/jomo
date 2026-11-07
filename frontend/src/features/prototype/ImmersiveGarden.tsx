@@ -1,4 +1,6 @@
 "use client";
+import { GardenHistory } from "./GardenHistory";
+import { NotificationBell } from "./NotificationBell";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -85,6 +87,8 @@ export function ImmersiveGarden({ garden }: { garden: Garden }) {
           </Link>
         </nav>
         <div className="j-game-actions">
+          <NotificationBell />
+          <GardenHistory gardenId={garden.id} groupId={garden.owner_group_id} />
           <button className="j-garden-arrange" aria-pressed={arranging} aria-label={arranging ? "Finish arranging garden" : "Arrange garden"} disabled={action.pending}
             onClick={() => setArranging(value => !value)}><Move aria-hidden="true" /><span>{arranging ? "Done" : "Arrange"}</span></button>
           {shared && <button className="j-garden-sync" onClick={view.refresh} aria-label="Refresh shared garden" title="Refresh shared garden">

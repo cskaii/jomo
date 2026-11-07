@@ -64,7 +64,7 @@ def test_presidio_provider_clean_text():
 def test_privacy_text_endpoint_presidio(client):
     user_id = str(uuid.uuid4())
     headers = {"Authorization": f"Bearer {user_id}"}
-    payload = {"text": "Contact jane@example.com, NRIC T7654321B.", "checks": ["pii"]}
+    payload = {"text": "Contact jane@example.com, NRIC T7654321B.", "checks": ["pii"], "consent": True}
 
     response = client.post("/api/v1/ai/privacy/text", json=payload, headers=headers)
     assert response.status_code == 200
@@ -149,7 +149,7 @@ def test_endpoint_enforces_max_text_length(client):
     headers = {"Authorization": f"Bearer {uuid.uuid4()}"}
     response = client.post(
         "/api/v1/ai/privacy/text",
-        json={"text": "a" * 10001, "checks": ["pii"]},
+        json={"text": "a" * 10001, "checks": ["pii"], "consent": True},
         headers=headers,
     )
     assert response.status_code == 422
@@ -158,14 +158,14 @@ def test_endpoint_enforces_max_text_length(client):
 def test_endpoint_rejects_missing_auth(client):
     response = client.post(
         "/api/v1/ai/privacy/text",
-        json={"text": "test@example.com", "checks": ["pii"]},
+        json={"text": "test@example.com", "checks": ["pii"], "consent": True},
     )
     assert response.status_code == 401
 
 
 def test_disabled_presidio_never_substitutes_another_detector(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "AI_PRESIDIO_ENABLED", False)
-    response = client.post("/api/v1/ai/privacy/text", json={"text": "test@example.com", "checks": ["pii"]},
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "test@example.com", "checks": ["pii"], "consent": True},
                            headers={"Authorization": f"Bearer {uuid.uuid4()}"})
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "SCREENING_UNAVAILABLE"
@@ -178,7 +178,7 @@ def test_presidio_failure_reports_unavailability_without_logging_input(client, m
             raise RuntimeError("private-input@example.com")
 
     monkeypatch.setattr("app.services.privacy_service.get_screening_provider", lambda: BrokenProvider())
-    response = client.post("/api/v1/ai/privacy/text", json={"text": "private-input@example.com", "checks": ["pii"]},
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "private-input@example.com", "checks": ["pii"], "consent": True},
                            headers={"Authorization": f"Bearer {uuid.uuid4()}"})
     assert response.status_code == 503
     assert "private-input@example.com" not in response.text
@@ -198,6 +198,6 @@ def test_presidio_email_validation_does_not_use_network(monkeypatch):
 
 
 def test_unsupported_screening_language_is_rejected(client):
-    response = client.post("/api/v1/ai/privacy/text", json={"text": "test", "checks": ["pii"], "language": "xx"},
+    response = client.post("/api/v1/ai/privacy/text", json={"text": "test", "checks": ["pii"], "consent": True, "language": "xx"},
                            headers={"Authorization": f"Bearer {uuid.uuid4()}"})
     assert response.status_code == 422

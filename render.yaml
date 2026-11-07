@@ -29,6 +29,12 @@ services:
         sync: false
       - key: SUPABASE_SECRET_KEY
         sync: false
+      - key: STORAGE_BUCKET
+        value: activity-proofs
+      - key: PRIVACY_CONTACT_EMAIL
+        sync: false
+      - key: PRIVACY_ORGANISATION
+        sync: false
       - key: AUTH_AUDIENCE
         value: authenticated
       - key: CORS_ORIGINS

@@ -46,7 +46,7 @@ def test_privacy_text_screening_pii(client):
     headers = {"Authorization": f"Bearer {user_id}"}
     payload = {
         "text": "Hi, email me at test@example.com or reach S1234567A.",
-        "checks": ["pii"],
+        "checks": ["pii"], "consent": True,
     }
     response = client.post("/api/v1/ai/privacy/text", json=payload, headers=headers)
     assert response.status_code == 200
