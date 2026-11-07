@@ -167,6 +167,9 @@ function GardenDrawer({
       className="j-garden-drawer"
       aria-labelledby="garden-drawer-title"
       onClose={onClose}
+      onKeyDown={event => {
+        if (event.key === "Escape") { event.preventDefault(); onClose(); }
+      }}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();

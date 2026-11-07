@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Leaf,
   Users,
@@ -13,6 +13,10 @@ import { profile, request } from "@/services/prototype";
 import { signOut } from "@/services/authSession";
 import { useResource } from "@/features/prototype/ui";
 import { EvilDuckGame } from "@/features/privacy-game/EvilDuckGame";
+import { LoadingScene } from "@/components/common/LoadingScene";
+import { PageLoading } from "@/components/common/PageLoading";
+import { useNavigationTransition } from "@/components/common/useNavigationTransition";
+import { welcomeTitle } from "@/lib/loadingCopy";
 const links = [
   ["/insights", "Insights", Leaf],
   ["/garden", "Garden", Flower2],
@@ -26,7 +30,17 @@ async function loadProfile() {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname(),
     router = useRouter(),
+    params = useSearchParams(),
     account = useResource(loadProfile, "account-profile");
+  const transition = useNavigationTransition(`${path}?${params.toString()}`);
+  const welcoming = !transition.welcomed || (!account.data && account.loading);
+  const transitioning = welcoming || transition.active;
+  useEffect(() => {
+    if (!transitioning) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, [transitioning]);
   useEffect(() => {
     if (!localStorage.getItem("jomo_auth_token")) router.replace("/login");
     const expired = () => router.replace("/login");
@@ -54,6 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
   return (
     <div className={`j-app ${path === "/insights" ? "j-today-app" : ""}`}>
+      <div className="j-app-content" inert={welcoming || undefined} aria-hidden={welcoming || undefined}>
       <a className="j-skip" href="#main">
         Skip to content
       </a>
@@ -108,7 +123,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="j-main">
+      <main id="main" tabIndex={-1} className="j-main"
+        inert={transitioning || undefined} aria-hidden={transitioning || undefined}>
         {account.error && <div className="j-panel j-error" role="alert">
           <p>{account.error}</p>
           <button className="j-button" onClick={account.refresh}>Retry connection</button>
@@ -117,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       {account.data && <EvilDuckGame key={account.data.id} userId={account.data.id} />}
-      <footer className="j-footer">
+      <footer className="j-footer" inert={transitioning || undefined}>
         <span>
           <Leaf aria-hidden="true" /> A little less online. A little more here.
         </span>
@@ -139,6 +155,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </nav>
+      </div>
+      {transitioning && <div className={`j-navigation-loader${welcoming ? " j-navigation-loader--welcome" : ""}`}>
+        {welcoming
+          ? <LoadingScene variant="welcome" title={welcomeTitle(false, account.data?.display_name, account.data?.username)} />
+          : <PageLoading />}
+      </div>}
     </div>
   );
 }

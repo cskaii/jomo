@@ -2390,3 +2390,36 @@ body:has(.j-immersive-garden) { overflow: hidden; }
   .j-loading-dots span:nth-child(1) { opacity: .35; }
   .j-loading-dots span:nth-child(2) { opacity: .65; }
 }
+
+/* Shared transitions also cover instantly available and cached routes. */
+.j-app-content { display: flex; flex-direction: column; min-height: 100dvh; }
+.j-navigation-loader { position: fixed; inset: 86px 0 0; z-index: 80; display: grid; overflow: auto; overscroll-behavior: contain; background: var(--canvas); }
+.j-navigation-loader > .j-loading-scene { min-height: 100%; }
+.j-navigation-loader--welcome { inset: 0; z-index: 120; }
+@media (max-width: 760px) {
+  .j-navigation-loader { top: 73px; bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .j-navigation-loader--welcome { inset: 0; }
+}
+
+/* Collaborative garden controls and movable collection items. */
+.j-garden-sync, .j-garden-arrange { min-height: 38px; border: 1px solid #cbdab9; border-radius: 12px; background: #f5f8e9; color: #42634b; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 12px; font-weight: 700; }
+.j-garden-sync svg, .j-garden-arrange svg { width: 17px; height: 17px; }
+.j-garden-arrange[aria-pressed='true'] { background: #3f7148; color: white; }
+.j-coin-balance small { max-width: 38px; color: inherit; font-size: 9px; line-height: 1.2; font-weight: 700; }
+button.j-game-object { padding: 0; border: 0; background: transparent; }
+button.j-game-object:disabled { opacity: 1; cursor: default; }
+button.j-game-object:disabled:hover { transform: translate(-50%, -72%); }
+.j-game-object--movable { cursor: grab; touch-action: none; border-radius: 16px; }
+.j-game-object--movable:hover, .j-game-object--movable:focus-visible { transform: translate(-50%, -72%); outline: 2px dashed #fff9d9; outline-offset: 3px; }
+.j-game-object--movable:active { cursor: grabbing; }
+.j-game-object img { pointer-events: none; user-select: none; }
+.j-garden-arrange-help { position: absolute; z-index: 10; left: 50%; bottom: 100px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); margin: 0; padding: 10px 16px; border-radius: 14px; background: #fffdf1ed; color: #42634b; font-size: 12px; text-align: center; box-shadow: 0 6px 20px #264b2b22; }
+.j-purchase-feedback { grid-column: 1 / -1; }
+@media (max-width: 760px) {
+  .j-garden-arrange span, .j-coin-balance small { display: none; }
+  .j-garden-sync, .j-garden-arrange { padding: 7px; min-width: 32px; }
+  .j-game-actions { gap: 4px; }
+  .j-garden-arrange-help { bottom: 94px; font-size: 10px; }
+}
+
+.j-game-object--movable:focus-visible { outline: 3px solid #234e2a; outline-offset: 2px; box-shadow: 0 0 0 5px #fffdf0; }
