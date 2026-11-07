@@ -31,7 +31,7 @@ export function PersonalGarden({ garden }: { garden: Garden }) {
     ]);
     return { details, shop, items };
   }, [garden.id]);
-  const view = useResource(load);
+  const view = useResource(load, `personal-garden:${garden.id}`);
   const action = useAction();
   const [shopOpen, setShopOpen] = useState(false);
   const [category, setCategory] = useState<ShopCategory | "all">("all");
@@ -45,11 +45,7 @@ export function PersonalGarden({ garden }: { garden: Garden }) {
   );
 
   if (!view.data) return (
-    <section className="j-immersive-garden j-game-shell">
-      <div className="j-immersive-garden-status">
-        <ResourceState loading={view.loading} error={view.error} retry={view.refresh} />
-      </div>
-    </section>
+    <ResourceState loading={view.loading} error={view.error} retry={view.refresh} />
   );
 
   const { details, items } = view.data;

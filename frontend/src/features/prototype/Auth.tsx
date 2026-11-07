@@ -6,12 +6,18 @@ import { request, profile, success, z } from "@/services/prototype";
 import { apiClient } from "@/services/apiClient";
 import { authSession, clearSession, saveSession } from "@/services/authSession";
 import { useAction, Feedback, Panel, Heading, Submit } from "./ui";
+import { LoadingScene } from "@/components/common/LoadingScene";
+import { welcomeTitle } from "@/lib/loadingCopy";
+import { fetchResource } from "@/lib/resourceCache";
+import { sessionOwner } from "@/services/authSession";
 
 export default function Login() { return <AccountForm registration={false} />; }
 export function Register() { return <AccountForm registration />; }
 function AccountForm({ registration }: { registration: boolean }) {
   const router = useRouter(), action = useAction();
   const [email, setEmail] = useState(""), [password, setPassword] = useState("");
+  const [welcomeName, setWelcomeName] = useState<string | null>(null);
+  const [entered, setEntered] = useState(false);
   useEffect(() => {
     // Email confirmation may return an implicit-flow fragment. Do not retain it
     // in browser history; the account signs in through the verified password flow.
@@ -19,10 +25,17 @@ function AccountForm({ registration }: { registration: boolean }) {
   }, []);
   async function openSession(session: z.infer<typeof authSession>) {
     saveSession(session);
-    try { await request(profile, "/users/me"); }
-    catch (error) { clearSession(); throw error; }
-    router.replace("/insights");
+    try {
+      const me = await request(profile, "/users/me");
+      setWelcomeName(me.display_name);
+      await fetchResource("account-profile", async () => me, sessionOwner(session.access_token));
+      setEntered(true);
+      router.replace("/insights");
+    } catch (error) { setEntered(false); clearSession(); throw error; }
   }
+  if (action.pending || entered) return <LoadingScene variant="welcome"
+    title={registration && !entered ? "A little room to grow." : welcomeTitle(registration, welcomeName)}
+    description={entered ? "Preparing your little space…" : registration ? "Creating your JOMO account…" : "Opening your little space…"} />;
   return <div className="j-auth">
     <Heading eyebrow="JOMO" title={registration ? "A little room to grow." : "Welcome back."}><p>Less scrolling. More living.</p></Heading>
     <Panel title={registration ? "Create your account" : "Sign in to your garden"}>

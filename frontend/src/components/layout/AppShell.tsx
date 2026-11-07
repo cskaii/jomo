@@ -26,7 +26,7 @@ async function loadProfile() {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname(),
     router = useRouter(),
-    account = useResource(loadProfile);
+    account = useResource(loadProfile, "account-profile");
   useEffect(() => {
     if (!localStorage.getItem("jomo_auth_token")) router.replace("/login");
     const expired = () => router.replace("/login");
@@ -40,24 +40,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.removeEventListener("storage", storage);
     };
   }, [router]);
-  if (account.error)
-    return (
-      <div className="j-auth">
-        <p role="alert">{account.error}</p>
-        <button className="j-button" onClick={account.refresh}>
-          Retry connection
-        </button>
-        <p>
-          <Link href="/login">Open prototype access</Link>
-        </p>
-      </div>
-    );
-  if (!account.data)
-    return (
-      <p className="j-panel" role="status">
-        Opening your space…
-      </p>
-    );
   async function logout() {
     try { await signOut(); } catch { /* Local credentials are cleared even offline. */ }
     router.replace("/login");
@@ -97,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="j-account">
             <Link className="j-account-name" href="/settings">
-              <strong>{account.data.display_name}</strong>
+              <strong>{account.data?.display_name ?? "Your space"}</strong>
               <span>LESS SCROLLING. MORE LIVING.</span>
             </Link>
             <Link
@@ -105,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href="/settings"
               aria-label="Account settings"
             >
-              {account.data.display_name.slice(0, 1).toUpperCase()}
+              {account.data?.display_name.slice(0, 1).toUpperCase() ?? "·"}
             </Link>
             <Link
               className="j-icon-button"
@@ -127,9 +109,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main id="main" tabIndex={-1} className="j-main">
+        {account.error && <div className="j-panel j-error" role="alert">
+          <p>{account.error}</p>
+          <button className="j-button" onClick={account.refresh}>Retry connection</button>
+          <Link href="/login">Sign in</Link>
+        </div>}
         {children}
       </main>
-      <EvilDuckGame />
+      {account.data && <EvilDuckGame key={account.data.id} userId={account.data.id} />}
       <footer className="j-footer">
         <span>
           <Leaf aria-hidden="true" /> A little less online. A little more here.

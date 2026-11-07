@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { clearResourceCache } from "@/lib/resourceCache";
 
 export const authSession = z.object({
   access_token: z.string().min(1), refresh_token: z.string().min(1),
@@ -8,15 +9,27 @@ const api = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
 let refreshing: Promise<string> | null = null;
 
 export function clearSession() {
+  clearResourceCache();
   for (const key of ["jomo_auth_token", "jomo_refresh_token", "jomo_token_expires_at"])
     localStorage.removeItem(key);
 }
 
 export function saveSession(value: z.infer<typeof authSession>) {
   const session = authSession.parse(value);
+  if (sessionOwner(session.access_token) !== sessionOwner(localStorage.getItem("jomo_auth_token")))
+    clearResourceCache();
   localStorage.setItem("jomo_auth_token", session.access_token);
   localStorage.setItem("jomo_refresh_token", session.refresh_token);
   localStorage.setItem("jomo_token_expires_at", String(Date.now() + session.expires_in * 1000));
+}
+
+export function sessionOwner(token: string | null): string {
+  if (!token) return "";
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const subject: unknown = JSON.parse(atob(payload)).sub;
+    return typeof subject === "string" ? subject : token;
+  } catch { return token; }
 }
 
 function expireSession() {
