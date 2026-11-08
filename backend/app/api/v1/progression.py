@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Request
 from app.api.dependencies import CurrentUser, DbSession
 from app.schemas.common import ResponseEnvelope, SuccessStatus
 from app.schemas.progression import (
-    AchievementResponse, MissionResponse, ProgressionResponse, QuestCompleteRequest,
+    AchievementResponse, DailyDiscoveryResponse, MissionResponse, ProgressionResponse, QuestCompleteRequest,
     QuestCompletionResponse, QuestInstanceResponse, QuestResponse, XpTransactionResponse,
 )
 from app.services.progression_service import ProgressionService
@@ -44,6 +44,11 @@ async def quest_history(request: Request, current_user: CurrentUser, db: DbSessi
         "completed_at": row.completed_at, "abandoned_at": row.abandoned_at,
         "reflection": row.reflection, "xp_claimed": row.xp_claimed,
     } for row in rows], request)
+
+
+@router.get("/quests/discovery", response_model=ResponseEnvelope[DailyDiscoveryResponse])
+async def discovery(request: Request, current_user: CurrentUser, db: DbSession):
+    return wrap_response(ProgressionService(db).daily_discovery(current_user.id), request)
 
 
 @router.get("/quests/{code}", response_model=ResponseEnvelope[QuestResponse])
@@ -92,6 +97,7 @@ async def missions(request: Request, mission_type: str, current_user: CurrentUse
         "current_progress": row.current_progress, "target_value": row.mission.target_value,
         "reward_xp": row.mission.reward_xp, "status": row.status,
         "reward_claimed": row.reward_claimed, "start_at": row.start_at, "end_at": row.end_at,
+        "categories": (row.mission.category_filter or {}).get("categories", []),
     } for row in rows], request)
 
 
@@ -104,6 +110,7 @@ async def claim_mission(request: Request, assignment_id: UUID, current_user: Cur
         "current_progress": row.current_progress, "target_value": row.mission.target_value,
         "reward_xp": row.mission.reward_xp, "status": row.status,
         "reward_claimed": row.reward_claimed, "start_at": row.start_at, "end_at": row.end_at,
+        "categories": (row.mission.category_filter or {}).get("categories", []),
     }, request)
 
 

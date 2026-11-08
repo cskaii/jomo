@@ -35,6 +35,15 @@ class QuestResponse(BaseModel):
     is_favorite: bool = False
     active_instance_id: Optional[UUID] = None
     completion_count: int = 0
+    completed_today: bool = False
+
+
+class DailyDiscoveryResponse(BaseModel):
+    period_key: str
+    timezone: str
+    refresh_at: datetime
+    quests: list[QuestResponse]
+    suggestions: list[QuestResponse]
 
 
 class QuestInstanceResponse(BaseModel):
@@ -77,6 +86,7 @@ class MissionResponse(BaseModel):
     reward_claimed: bool
     start_at: datetime
     end_at: datetime
+    categories: list[str] = Field(default_factory=list)
 
 
 class AchievementResponse(BaseModel):

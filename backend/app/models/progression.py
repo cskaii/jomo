@@ -92,6 +92,16 @@ class UserQuestInstance(Base):
     __table_args__ = (CheckConstraint("status IN ('active', 'completed', 'abandoned')", name="check_quest_instance_status"),)
 
 
+class DailyQuestSelection(Base):
+    """Persisted discovery history, including items shown but never started."""
+    __tablename__ = "daily_quest_selections"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    period_key: Mapped[str] = mapped_column(String(10), primary_key=True)
+    quest_codes: Mapped[list] = mapped_column(JSON, nullable=False)
+    suggestion_codes: Mapped[list] = mapped_column(JSON, nullable=False)
+
+
 class QuestFavorite(Base):
     __tablename__ = "quest_favorites"
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

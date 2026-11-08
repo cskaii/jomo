@@ -1,6 +1,6 @@
-import hashlib
 import random
 import uuid
+from collections import Counter
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -11,10 +11,10 @@ from app.data.quest_catalog import ACHIEVEMENTS, CATEGORIES, MISSIONS, QUESTS, X
 from app.models.activity import Activity, ActivityParticipant
 from app.models.garden import Garden
 from app.models.progression import (
-    AchievementDefinition, MissionDefinition, Quest, QuestFavorite,
+    AchievementDefinition, DailyQuestSelection, MissionDefinition, Quest, QuestFavorite,
     UserAchievement, UserMission, UserProgression, UserQuestInstance, XpTransaction,
 )
-from app.models.user import UserPreference
+from app.models.user import User, UserPreference
 from app.services.points_service import PointsService
 from app.services.user_service import UserService
 from app.core.config import get_settings
@@ -28,8 +28,8 @@ class ProgressionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def seed_catalog(self) -> None:
-        if not get_settings().AUTO_SEED_CATALOG:
+    def seed_catalog(self, *, explicit: bool = False) -> None:
+        if not explicit and not get_settings().AUTO_SEED_CATALOG:
             return
         existing = {value for (value,) in self.db.query(Quest.code).all()}
         for code, title, category, minutes, difficulty, instructions in QUESTS:
@@ -102,7 +102,7 @@ class ProgressionService:
     def _quest_payload(self, quest: Quest, user_id: uuid.UUID) -> dict:
         favorite = self.db.get(QuestFavorite, (user_id, quest.id)) is not None
         active = self.db.query(UserQuestInstance).filter_by(user_id=user_id, quest_id=quest.id, status="active").first()
-        count = self.db.query(UserQuestInstance).filter_by(user_id=user_id, quest_id=quest.id, status="completed").count()
+        completed = self.db.query(UserQuestInstance).filter_by(user_id=user_id, quest_id=quest.id, status="completed").all()
         return {
             "id": quest.id, "code": quest.code, "title": quest.title,
             "description": quest.description, "instructions": quest.instructions,
@@ -111,8 +111,78 @@ class ProgressionService:
             "xp_reward": quest.xp_reward, "repeatability": quest.repeatability,
             "proof_requirement": quest.proof_requirement, "reflection_prompt": quest.reflection_prompt,
             "is_favorite": favorite, "active_instance_id": active.id if active else None,
-            "completion_count": count,
+            "completion_count": len(completed),
+            "completed_today": any(item.completed_at and self._local_date(user_id, item.completed_at) == self._local_date(user_id) for item in completed),
         }
+
+    def _lock_user(self, user_id):
+        # All quest/mission mutations take the same lock before reading state.
+        # PostgreSQL serializes concurrent tabs and duplicate reward requests.
+        self.db.query(User).filter_by(id=user_id).populate_existing().with_for_update().one()
+
+    @staticmethod
+    def _rotate(pool, history, count, seed, category_key=None):
+        """Least-shown first: exhaust unseen content before starting another cycle.
+
+        The previous selection is excluded at a cycle boundary when the pool
+        permits it. Within each exposure tier prefer varied categories.
+        """
+        rng = random.Random(seed)
+        candidates = list(pool)
+        rng.shuffle(candidates)
+        exposures = Counter(code for batch in history for code in batch)
+        last_seen = {code: index for index, batch in enumerate(history) for code in batch}
+        previous = set(history[-1]) if history else set()
+        selected, categories = [], set()
+        while candidates and len(selected) < count:
+            fresh = [item for item in candidates if item.code not in previous]
+            eligible = fresh if fresh else candidates
+            item = min(eligible, key=lambda item: (
+                exposures[item.code],
+                bool(category_key and category_key(item) in categories),
+                last_seen.get(item.code, -1),
+            ))
+            selected.append(item)
+            if category_key:
+                categories.add(category_key(item))
+            candidates.remove(item)
+        return selected
+
+    def daily_discovery(self, user_id):
+        self.seed_catalog()
+        self.get_progression(user_id)
+        self._lock_user(user_id)
+        key, _, end = self._period(user_id, "daily")
+        selection = self.db.get(DailyQuestSelection, (user_id, key))
+        if selection and not (selection.quest_codes or selection.suggestion_codes):
+            # A catalogue installed after an empty first visit is usable today.
+            self.db.delete(selection)
+            self.db.flush()
+            selection = None
+        if not selection:
+            pool = self.db.query(Quest).filter_by(is_active=True).order_by(Quest.code).all()
+            rows = self.db.query(DailyQuestSelection).filter(
+                DailyQuestSelection.user_id == user_id,
+                DailyQuestSelection.period_key < key,
+            ).order_by(DailyQuestSelection.period_key).all()
+            history = [row.quest_codes + row.suggestion_codes for row in rows]
+            chosen = self._rotate(pool, history, 6, f"{user_id}:discovery:{key}", lambda item: item.category)
+            # Interleave categories between the two sections.
+            selection = DailyQuestSelection(user_id=user_id, period_key=key,
+                quest_codes=[item.code for item in chosen[::2]],
+                suggestion_codes=[item.code for item in chosen[1::2]])
+            self.db.add(selection)
+            self.db.flush()
+        codes = selection.quest_codes + selection.suggestion_codes
+        catalogue = {item.code: item for item in self.db.query(Quest).filter(
+            Quest.code.in_(codes), Quest.is_active.is_(True)).all()}
+        result = {
+            "period_key": key, "timezone": str(self._timezone(user_id)), "refresh_at": end,
+            "quests": [self._quest_payload(catalogue[code], user_id) for code in selection.quest_codes if code in catalogue],
+            "suggestions": [self._quest_payload(catalogue[code], user_id) for code in selection.suggestion_codes if code in catalogue],
+        }
+        self.db.commit()
+        return result
 
     def list_quests(self, user_id: uuid.UUID, category=None, difficulty=None, search=None, favorites=False) -> list[dict]:
         self.seed_catalog()
@@ -150,6 +220,8 @@ class ProgressionService:
 
     def start_quest(self, user_id: uuid.UUID, code: str) -> UserQuestInstance:
         self.seed_catalog()
+        self.get_progression(user_id)
+        self._lock_user(user_id)
         quest = self.db.query(Quest).filter(Quest.code == code, Quest.is_active.is_(True)).first()
         if not quest:
             raise HTTPException(404, detail={"code": "QUEST_NOT_FOUND", "message": "Quest not found."})
@@ -181,6 +253,7 @@ class ProgressionService:
         return instance
 
     def abandon_quest(self, user_id: uuid.UUID, instance_id: uuid.UUID) -> UserQuestInstance:
+        self._lock_user(user_id)
         instance = self._instance(user_id, instance_id)
         if instance.status != "active":
             raise HTTPException(409, detail={"code": "INVALID_QUEST_STATE", "message": "Only an active quest can be abandoned."})
@@ -194,6 +267,8 @@ class ProgressionService:
         return instance
 
     def complete_quest(self, user_id: uuid.UUID, instance_id: uuid.UUID, reflection: str | None) -> dict:
+        self.get_progression(user_id)
+        self._lock_user(user_id)
         instance = self._instance(user_id, instance_id)
         quest = instance.quest
         if instance.status == "completed":
@@ -271,12 +346,14 @@ class ProgressionService:
         start_date = local_now.date() if kind == "daily" else local_now.date() - timedelta(days=local_now.weekday())
         days = 1 if kind == "daily" else 7
         start = datetime.combine(start_date, time.min, tzinfo=tz).astimezone(timezone.utc)
-        return start_date.isoformat(), start, start + timedelta(days=days)
+        end = datetime.combine(start_date + timedelta(days=days), time.min, tzinfo=tz).astimezone(timezone.utc)
+        return start_date.isoformat(), start, end
 
     def get_missions(self, user_id, kind):
         self.seed_catalog()
+        self.get_progression(user_id)
+        self._lock_user(user_id)
         self._ensure_missions(user_id, kind)
-        self.db.commit()
         self._refresh_missions(user_id, kind)
         self.db.commit()
         key, _, _ = self._period(user_id, kind)
@@ -293,8 +370,14 @@ class ProgressionService:
         ).all()
         if not assigned:
             pool = self.db.query(MissionDefinition).filter_by(mission_type=kind, is_active=True).order_by(MissionDefinition.code).all()
-            seed = int(hashlib.sha256(f"{user_id}:{kind}:{key}".encode()).hexdigest()[:16], 16)
-            for mission in random.Random(seed).sample(pool, min(3, len(pool))):
+            rows = self.db.query(UserMission).join(MissionDefinition).filter(
+                UserMission.user_id == user_id, UserMission.period_key < key,
+                MissionDefinition.mission_type == kind,
+            ).order_by(UserMission.period_key, MissionDefinition.code).all()
+            history_by_period = {}
+            for row in rows:
+                history_by_period.setdefault(row.period_key, []).append(row.mission.code)
+            for mission in self._rotate(pool, list(history_by_period.values()), 3, f"{user_id}:{kind}:{key}"):
                 self.db.add(UserMission(user_id=user_id, mission_id=mission.id, period_key=key, start_at=start, end_at=end))
             self.db.flush()
 
@@ -319,7 +402,11 @@ class ProgressionService:
                 elif metric == "xp_earned":
                     value = sum(i.quest.xp_reward for i in completions)
                 elif metric == "minutes":
-                    value = sum(i.quest.estimated_duration_minutes for i in completions)
+                    activity_ids = [i.activity_id for i in completions]
+                    value = sum(minutes for (minutes,) in self.db.query(ActivityParticipant.eligible_minutes).filter(
+                        ActivityParticipant.user_id == user_id,
+                        ActivityParticipant.activity_id.in_(activity_ids),
+                    ).all())
                 elif metric == "distinct_categories":
                     value = len({i.quest.category for i in completions})
                 else:
@@ -330,6 +417,8 @@ class ProgressionService:
         self.db.flush()
 
     def claim_mission(self, user_id, assignment_id):
+        self.get_progression(user_id)
+        self._lock_user(user_id)
         row = self.db.query(UserMission).filter_by(id=assignment_id, user_id=user_id).first()
         if not row:
             raise HTTPException(404, detail={"code": "MISSION_NOT_FOUND", "message": "Mission not found."})

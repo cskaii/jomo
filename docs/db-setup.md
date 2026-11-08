@@ -15,7 +15,11 @@ From `backend`, with dependencies installed and `backend/.env` filled:
 .\.venv\Scripts\python.exe -m app.db.setup --check-only
 ```
 
-For a disposable local SQLite database, explicitly add `--allow-sqlite`. The setup command creates 32 application tables through Alembic and inserts no application rows. It preserves existing records, checks the migration head, and refuses an unversioned existing application schema.
+For a disposable local SQLite database, explicitly add `--allow-sqlite`. The setup command creates 33 application tables through Alembic and inserts no application rows. It preserves existing records, checks the migration head, and refuses an unversioned existing application schema.
+
+The current migration head is `e21b9d73a401`, which adds private daily activity
+selection history. Upgrade before serving the updated Activities page. See
+[daily activities](daily-activities.md) for rotation and catalogue behaviour.
 
 For a fresh Supabase database you can instead run `supabase/schema.sql` in SQL Editor. It contains schema DDL and Alembic bookkeeping only. PostgreSQL RLS is enabled for all application tables; access goes through FastAPI.
 
