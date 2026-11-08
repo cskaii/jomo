@@ -24,9 +24,12 @@ class ProofService:
     def __init__(self, db):
         self.db = db
 
-    def participant(self, actor, activity_id):
-        activity = ActivityService(self.db).get_activity(actor, activity_id)
-        participant = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=actor).populate_existing().with_for_update().first()
+    def participant(self, actor, activity_id, *, for_update=True):
+        activity = ActivityService(self.db).get_activity(actor, activity_id, for_update=for_update)
+        query = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=actor).populate_existing()
+        if for_update:
+            query = query.with_for_update()
+        participant = query.first()
         if not participant or participant.status == "left":
             raise HTTPException(403, detail={"code": "PARTICIPATION_REQUIRED", "message": "Join this activity before submitting evidence."})
         return activity, participant
@@ -149,7 +152,7 @@ class ProofService:
         return proof
 
     def get_my_proof(self, actor, activity_id):
-        _, participant = self.participant(actor, activity_id)
+        _, participant = self.participant(actor, activity_id, for_update=False)
         proof = self.db.query(ProofSubmission).filter_by(participant_id=participant.id).order_by(ProofSubmission.submitted_at.desc()).first()
         if not proof:
             raise HTTPException(404, detail={"code": "PROOF_NOT_FOUND", "message": "No evidence submitted yet."})
@@ -164,7 +167,7 @@ class ProofService:
         return activity, owner
 
     def list_for_review(self, actor, activity_id):
-        activity, peer = self.participant(actor, activity_id)
+        activity, peer = self.participant(actor, activity_id, for_update=False)
         if not activity.group_id or peer.status not in ("active", "awaiting_proof", "completed"):
             return []
         return self.db.query(ProofSubmission).join(ActivityParticipant, ProofSubmission.participant_id == ActivityParticipant.id).join(GroupMember,

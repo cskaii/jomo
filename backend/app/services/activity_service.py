@@ -103,8 +103,13 @@ class ActivityService:
         self.db.refresh(activity)
         return activity
 
-    def get_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> Activity:
-        activity = self.db.query(Activity).filter(Activity.id == activity_id).populate_existing().with_for_update().first()
+    def get_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID, *, for_update: bool = False) -> Activity:
+        query = self.db.query(Activity).filter(Activity.id == activity_id).populate_existing()
+        # Reading the details/participants/evidence panels must not serialize
+        # every request behind an exclusive PostgreSQL activity lock.
+        if for_update:
+            query = query.with_for_update()
+        activity = query.first()
         if not activity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -124,7 +129,7 @@ class ActivityService:
         return activity
 
     def update_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID, data: ActivityUpdateRequest) -> Activity:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         if activity.created_by != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -152,7 +157,7 @@ class ActivityService:
         return activity
 
     def publish_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> Activity:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         if activity.created_by != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -169,7 +174,7 @@ class ActivityService:
         return activity
 
     def start_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID, client_started_at: Optional[datetime]) -> Activity:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         caller = self.db.query(ActivityParticipant).filter_by(activity_id=activity_id, user_id=user_id).first()
         if not caller or caller.status not in ("joined", "active"):
             raise HTTPException(403, detail={"code": "PARTICIPATION_REQUIRED", "message": "Join the activity before starting it."})
@@ -225,7 +230,7 @@ class ActivityService:
         return activity
 
     def join_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> ActivityParticipant:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         if activity.status not in (ActivityStatus.PUBLISHED.value, ActivityStatus.ACTIVE.value):
             raise HTTPException(409, detail={"code": "INVALID_STATE", "message": "This activity cannot be joined."})
         if activity.group_id:
@@ -291,7 +296,7 @@ class ActivityService:
             self.db.commit()
 
     def end_activity(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> Activity:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         actor = self.db.query(ActivityParticipant).filter(
             ActivityParticipant.activity_id == activity_id,
             ActivityParticipant.user_id == user_id,
@@ -353,7 +358,7 @@ class ActivityService:
         )
 
     def request_completion(self, user_id: uuid.UUID, activity_id: uuid.UUID) -> None:
-        activity = self.get_activity(user_id, activity_id)
+        activity = self.get_activity(user_id, activity_id, for_update=True)
         participant = (
             self.db.query(ActivityParticipant)
             .filter(ActivityParticipant.activity_id == activity_id, ActivityParticipant.user_id == user_id)

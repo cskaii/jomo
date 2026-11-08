@@ -62,6 +62,13 @@ test('a timed-out purchase is never replayed automatically', async () => {
   await assert.rejects(c.reject({ config: { url: '/gardens/test/purchases', method: 'post' } }));
   assert.deepEqual(c.stats(), { wakes: 0, retries: 0, clears: 0 });
 });
+
+test('an uncertain start action asks for status reconciliation without replaying it', async () => {
+  const c = client();
+  await assert.rejects(c.reject({ code: 'ECONNABORTED', config: { url: '/activities/test/start', method: 'post' } }),
+    error => error.code === 'REQUEST_TIMEOUT' && /may have completed/i.test(error.message));
+  assert.deepEqual(c.stats(), { wakes: 0, retries: 0, clears: 0 });
+});
 test('simultaneous wake-ups share one public probe and clear connection state', async () => {
   let release, calls = 0;
   const api = load('backendConnection', { fetch: () => { calls++; return new Promise(resolve => { release = resolve; }); } });

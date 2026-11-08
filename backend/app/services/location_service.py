@@ -38,7 +38,7 @@ class LocationService:
                 detail={"code": "PARTICIPANT_NOT_FOUND", "message": "Must be participant in activity to check in."},
             )
 
-        activity = ActivityService(self.db).get_activity(user_id, activity_id)
+        activity = ActivityService(self.db).get_activity(user_id, activity_id, for_update=True)
         prefs = self.db.get(UserPreference, user_id)
         now = datetime.now(timezone.utc)
         if not prefs or not prefs.location_enabled:
