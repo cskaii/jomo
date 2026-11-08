@@ -56,9 +56,16 @@ apiClient.interceptors.response.use(
       });
     }
     const status = error.response?.status;
+    const mutation = !!config?.method && !["get", "head", "options"].includes(config.method.toLowerCase());
+    const timedOut = ["ECONNABORTED", "ETIMEDOUT"].includes(error.code ?? "") || status === 504;
+    const unavailable = !status || [502, 503, 504].includes(status);
     return Promise.reject({
-      code: status ? "HTTP_ERROR" : "NETWORK_ERROR",
-      message: !status || status === 502 || status === 503 || status === 504
+      code: timedOut ? "REQUEST_TIMEOUT" : status ? "HTTP_ERROR" : "NETWORK_ERROR",
+      message: unavailable && mutation
+        ? "The server did not confirm this action. It may have completed. Refresh the status before trying again."
+        : timedOut
+        ? "The backend did not respond in time. Please retry shortly."
+        : unavailable
         ? "JOMO cannot reach its backend. Please retry shortly or contact the team."
         : `The backend request failed (HTTP ${status}). Please retry.`,
       status,

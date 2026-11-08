@@ -18,7 +18,7 @@ router = APIRouter(prefix="/activities", tags=["Activities"])
 
 
 @router.get("", response_model=ResponseEnvelope[List[ActivityResponse]])
-async def browse_activities(
+def browse_activities(
     request: Request,
     current_user: CurrentUser,
     db: DbSession,
@@ -33,7 +33,7 @@ async def browse_activities(
 
 
 @router.post("", response_model=ResponseEnvelope[ActivityResponse], status_code=status.HTTP_201_CREATED)
-async def create_activity(
+def create_activity(
     request: Request,
     payload: ActivityCreateRequest,
     current_user: CurrentUser,
@@ -45,7 +45,7 @@ async def create_activity(
 
 
 @router.get("/{activity_id}", response_model=ResponseEnvelope[ActivityResponse])
-async def get_activity(
+def get_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -57,7 +57,7 @@ async def get_activity(
 
 
 @router.patch("/{activity_id}", response_model=ResponseEnvelope[ActivityResponse])
-async def update_activity(
+def update_activity(
     request: Request,
     activity_id: UUID,
     payload: ActivityUpdateRequest,
@@ -70,7 +70,7 @@ async def update_activity(
 
 
 @router.post("/{activity_id}/publish", response_model=ResponseEnvelope[ActivityResponse])
-async def publish_activity(
+def publish_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -82,7 +82,7 @@ async def publish_activity(
 
 
 @router.post("/{activity_id}/start", response_model=ResponseEnvelope[ActivityResponse])
-async def start_activity(
+def start_activity(
     request: Request,
     activity_id: UUID,
     payload: ActivityStartRequest,
@@ -95,7 +95,7 @@ async def start_activity(
 
 
 @router.post("/{activity_id}/join", response_model=ResponseEnvelope[ActivityParticipantResponse])
-async def join_activity(
+def join_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -107,7 +107,7 @@ async def join_activity(
 
 
 @router.post("/{activity_id}/leave", response_model=ResponseEnvelope[SuccessStatus])
-async def leave_activity(
+def leave_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -119,7 +119,7 @@ async def leave_activity(
 
 
 @router.post("/{activity_id}/end", response_model=ResponseEnvelope[ActivityResponse])
-async def end_activity(
+def end_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -131,7 +131,7 @@ async def end_activity(
 
 
 @router.get("/{activity_id}/participants", response_model=ResponseEnvelope[List[ActivityParticipantResponse]])
-async def list_participants(
+def list_participants(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -143,7 +143,7 @@ async def list_participants(
 
 
 @router.post("/{activity_id}/complete", response_model=ResponseEnvelope[SuccessStatus])
-async def complete_activity(
+def complete_activity(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,

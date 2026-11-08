@@ -10,7 +10,7 @@ router = APIRouter(prefix="/activities", tags=["Locations"])
 
 
 @router.post("/{activity_id}/check-ins", response_model=ResponseEnvelope[CheckInResponse], status_code=status.HTTP_201_CREATED)
-async def submit_check_in(
+def submit_check_in(
     request: Request,
     activity_id: UUID,
     payload: CheckInCreateRequest,
@@ -23,7 +23,7 @@ async def submit_check_in(
 
 
 @router.get("/{activity_id}/check-ins/me", response_model=ResponseEnvelope[CheckInResponse])
-async def get_my_check_in(
+def get_my_check_in(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -35,7 +35,7 @@ async def get_my_check_in(
 
 
 @router.delete("/{activity_id}/check-ins/me", response_model=ResponseEnvelope[SuccessStatus])
-async def delete_my_check_in(
+def delete_my_check_in(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,

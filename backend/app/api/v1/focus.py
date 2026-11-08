@@ -10,7 +10,7 @@ router = APIRouter(tags=["Focus Sessions"])
 
 
 @router.post("/activities/{activity_id}/focus-sessions", response_model=ResponseEnvelope[FocusSessionResponse], status_code=status.HTTP_201_CREATED)
-async def start_focus_session(
+def start_focus_session(
     request: Request,
     activity_id: UUID,
     current_user: CurrentUser,
@@ -22,7 +22,7 @@ async def start_focus_session(
 
 
 @router.post("/focus-sessions/{session_id}/end", response_model=ResponseEnvelope[FocusSessionResponse])
-async def end_focus_session(
+def end_focus_session(
     request: Request,
     session_id: UUID,
     current_user: CurrentUser,
@@ -34,7 +34,7 @@ async def end_focus_session(
 
 
 @router.get("/focus-sessions/{session_id}", response_model=ResponseEnvelope[FocusSessionResponse])
-async def get_focus_session(
+def get_focus_session(
     request: Request,
     session_id: UUID,
     current_user: CurrentUser,

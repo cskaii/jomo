@@ -276,11 +276,15 @@ export function ActivityDetails() {
   const joined = mine && mine.status !== "left",
     active = item.status === "active";
   async function mutate(path: string, body?: unknown) {
-    if (path.endsWith("/join")) await request(participant, path, "post", body);
-    else if (path.endsWith("/leave"))
-      await request(success, path, "post", body);
-    else await request(activity, path, "post", body);
-    view.refresh();
+    try {
+      if (path.endsWith("/join")) await request(participant, path, "post", body);
+      else if (path.endsWith("/leave"))
+        await request(success, path, "post", body);
+      else await request(activity, path, "post", body);
+    } finally {
+      // A lost response does not establish whether the server committed the action.
+      view.refresh();
+    }
   }
   return (
     <>
