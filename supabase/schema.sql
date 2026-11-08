@@ -845,5 +845,22 @@ ALTER TABLE public.data_access_events ENABLE ROW LEVEL SECURITY;
 
 UPDATE alembic_version SET version_num='d91e7c20b403' WHERE alembic_version.version_num = 'c8e31a04d912';
 
+-- Running upgrade d91e7c20b403 -> e21b9d73a401
+
+CREATE TABLE daily_quest_selections (
+    user_id UUID NOT NULL,
+    period_key VARCHAR(10) NOT NULL,
+    quest_codes JSON NOT NULL,
+    suggestion_codes JSON NOT NULL,
+    PRIMARY KEY (user_id, period_key),
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+ALTER TABLE daily_quest_selections ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE daily_quest_selections FROM anon, authenticated;
+
+UPDATE alembic_version SET version_num='e21b9d73a401' WHERE alembic_version.version_num = 'd91e7c20b403';
+
 COMMIT;
 

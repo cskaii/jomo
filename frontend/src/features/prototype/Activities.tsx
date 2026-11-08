@@ -10,7 +10,6 @@ import {
   member,
   group,
   profile,
-  activityMission,
   session,
   success,
   z,
@@ -29,17 +28,12 @@ import {
 } from "./ui";
 async function loadActivities() {
   const items = await request(activity.array(), "/activities");
-  const ideas = await request(
-    activityMission.array(),
-    "/ai/missions/recommend",
-    "post",
-    {},
-  ).catch(() => null);
-  return { items, ideas };
+  return { items };
 }
 export default function Activities({ embedded = false }: { embedded?: boolean }) {
   const view = useResource(loadActivities),
     [filter, setFilter] = useState("all");
+  useVisibleRefresh(view.refresh, 60000);
   if (!view.data)
     return (
       <ResourceState
@@ -99,30 +93,7 @@ export default function Activities({ embedded = false }: { embedded?: boolean })
       {!items.length && (
         <Empty>No activities in this view. Start with one small plan.</Empty>
       )}
-      <Panel title="A few ideas to get you going">
-        {view.data.ideas === null ? (
-          <p>Ideas are unavailable. You can still create your own activity.</p>
-        ) : view.data.ideas.length ? (
-          <div className="j-grid">
-            {view.data.ideas.map((idea) => (
-              <div key={idea.id}>
-                <h3>{idea.title}</h3>
-                <p>{idea.description}</p>
-                <small>{idea.duration_minutes} minutes · curated idea</small>
-                <p>
-                  <Link
-                    href={`/activities/create?title=${encodeURIComponent(idea.title)}&category=${encodeURIComponent(idea.category)}&minutes=${idea.duration_minutes}`}
-                  >
-                    Make this your plan →
-                  </Link>
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Empty>No catalogue suggestions available.</Empty>
-        )}
-      </Panel>
+
     </>
   );
 }
@@ -143,7 +114,7 @@ export function CreateActivity() {
     action = useAction(),
     groups = useResource(loadGroups);
   const [title, setTitle] = useState(params.get("title") ?? ""),
-    [description, setDescription] = useState("");
+    [description, setDescription] = useState(params.get("description") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "outdoor"),
     [duration, setDuration] = useState(params.get("minutes") ?? "30");
   const [evidence, setEvidence] = useState("");

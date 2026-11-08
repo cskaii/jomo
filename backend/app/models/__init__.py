@@ -13,7 +13,7 @@ from app.models.consent import ConsentRecord
 from app.models.screening import ScreeningEvent
 from app.models.retention import StorageDeletion, DataAccessEvent
 from app.models.progression import (
-    UserProgression, XpTransaction, Quest, UserQuestInstance, QuestFavorite,
+    UserProgression, XpTransaction, Quest, UserQuestInstance, QuestFavorite, DailyQuestSelection,
     MissionDefinition, UserMission, AchievementDefinition, UserAchievement,
 )
 
@@ -40,6 +40,6 @@ __all__ = [
     "ConsentRecord",
     "ScreeningEvent",
     "UserProgression", "XpTransaction", "Quest", "UserQuestInstance",
-    "QuestFavorite", "MissionDefinition", "UserMission",
+    "QuestFavorite", "DailyQuestSelection", "MissionDefinition", "UserMission",
     "AchievementDefinition", "UserAchievement",
 ]

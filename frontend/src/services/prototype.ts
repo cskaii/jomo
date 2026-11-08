@@ -206,6 +206,14 @@ export const quest = z.object({
   is_favorite: z.boolean(),
   active_instance_id: id.nullable().optional(),
   completion_count: z.number(),
+    completed_today: z.boolean().default(false),
+});
+export const dailyDiscovery = z.object({
+  period_key: z.string(),
+  timezone: z.string(),
+  refresh_at: stamp,
+  quests: quest.array(),
+  suggestions: quest.array(),
 });
 export const questInstance = z.object({
   id,
@@ -234,6 +242,7 @@ export const progressMission = z.object({
   title: z.string(),
   description: z.string(),
   mission_type: z.enum(["daily", "weekly"]),
+    categories: z.string().array().default([]),
   current_progress: z.number(),
   target_value: z.number(),
   reward_xp: z.number(),
