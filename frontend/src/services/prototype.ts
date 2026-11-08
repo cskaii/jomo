@@ -256,7 +256,15 @@ export const achievement = z.object({
   current_progress: z.number(), target_value: z.number(), reward_xp: z.number(),
   unlocked: z.boolean(), unlocked_at: nullable,
 });
-export const session = z.object({
+export const activitiesOverview = z.object({
+  progress: progression,
+  quests: quest.array(),
+  daily: progressMission.array(),
+  weekly: progressMission.array(),
+  achievements: achievement.array(),
+  discovery: dailyDiscovery,
+});
+  export const session = z.object({
   id,
   activity_id: id,
   participant_id: id,

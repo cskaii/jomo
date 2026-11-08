@@ -5,7 +5,8 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
 from app.data.quest_catalog import ACHIEVEMENTS, CATEGORIES, MISSIONS, QUESTS, XP_BY_DIFFICULTY
 from app.models.activity import Activity, ActivityParticipant
@@ -100,20 +101,40 @@ class ProgressionService:
         return value.astimezone(self._timezone(user_id)).date()
 
     def _quest_payload(self, quest: Quest, user_id: uuid.UUID) -> dict:
-        favorite = self.db.get(QuestFavorite, (user_id, quest.id)) is not None
-        active = self.db.query(UserQuestInstance).filter_by(user_id=user_id, quest_id=quest.id, status="active").first()
-        completed = self.db.query(UserQuestInstance).filter_by(user_id=user_id, quest_id=quest.id, status="completed").all()
-        return {
+        return self._quest_payloads([quest], user_id)[0]
+
+    def _quest_payloads(self, quests, user_id) -> list[dict]:
+        """Load per-user card state in batches, independent of catalogue size."""
+        if not quests:
+            return []
+        ids = [quest.id for quest in quests]
+        favorites = {ident for (ident,) in self.db.query(QuestFavorite.quest_id).filter(
+            QuestFavorite.user_id == user_id, QuestFavorite.quest_id.in_(ids)).all()}
+        active = dict(self.db.query(UserQuestInstance.quest_id, UserQuestInstance.id).filter(
+            UserQuestInstance.user_id == user_id, UserQuestInstance.quest_id.in_(ids),
+            UserQuestInstance.status == "active").all())
+        completed = {ident: (count, latest) for ident, count, latest in self.db.query(
+            UserQuestInstance.quest_id, func.count(UserQuestInstance.id), func.max(UserQuestInstance.completed_at),
+        ).filter(UserQuestInstance.user_id == user_id, UserQuestInstance.quest_id.in_(ids),
+                 UserQuestInstance.status == "completed").group_by(UserQuestInstance.quest_id).all()}
+        tz = self._timezone(user_id)
+        today = datetime.now(tz).date()
+        def completed_today(ident):
+            latest = completed.get(ident, (0, None))[1]
+            if latest is None:
+                return False
+            return (latest if latest.tzinfo else latest.replace(tzinfo=timezone.utc)).astimezone(tz).date() == today
+        return [{
             "id": quest.id, "code": quest.code, "title": quest.title,
             "description": quest.description, "instructions": quest.instructions,
             "category": quest.category, "category_label": CATEGORIES.get(quest.category, quest.category),
             "difficulty": quest.difficulty, "estimated_duration_minutes": quest.estimated_duration_minutes,
             "xp_reward": quest.xp_reward, "repeatability": quest.repeatability,
             "proof_requirement": quest.proof_requirement, "reflection_prompt": quest.reflection_prompt,
-            "is_favorite": favorite, "active_instance_id": active.id if active else None,
-            "completion_count": len(completed),
-            "completed_today": any(item.completed_at and self._local_date(user_id, item.completed_at) == self._local_date(user_id) for item in completed),
-        }
+            "is_favorite": quest.id in favorites, "active_instance_id": active.get(quest.id),
+            "completion_count": completed.get(quest.id, (0, None))[0],
+            "completed_today": completed_today(quest.id),
+        } for quest in quests]
 
     def _lock_user(self, user_id):
         # All quest/mission mutations take the same lock before reading state.
@@ -152,6 +173,11 @@ class ProgressionService:
         self.seed_catalog()
         self.get_progression(user_id)
         self._lock_user(user_id)
+        result = self._discovery_payload(user_id)
+        self.db.commit()
+        return result
+
+    def _discovery_payload(self, user_id, quest_payloads=None):
         key, _, end = self._period(user_id, "daily")
         selection = self.db.get(DailyQuestSelection, (user_id, key))
         if selection and not (selection.quest_codes or selection.suggestion_codes):
@@ -174,12 +200,43 @@ class ProgressionService:
             self.db.add(selection)
             self.db.flush()
         codes = selection.quest_codes + selection.suggestion_codes
-        catalogue = {item.code: item for item in self.db.query(Quest).filter(
-            Quest.code.in_(codes), Quest.is_active.is_(True)).all()}
-        result = {
+        if quest_payloads is None:
+            quests = self.db.query(Quest).filter(Quest.code.in_(codes), Quest.is_active.is_(True)).all()
+            quest_payloads = {item["code"]: item for item in self._quest_payloads(quests, user_id)}
+        return {
             "period_key": key, "timezone": str(self._timezone(user_id)), "refresh_at": end,
-            "quests": [self._quest_payload(catalogue[code], user_id) for code in selection.quest_codes if code in catalogue],
-            "suggestions": [self._quest_payload(catalogue[code], user_id) for code in selection.suggestion_codes if code in catalogue],
+            "quests": [quest_payloads[code] for code in selection.quest_codes if code in quest_payloads],
+            "suggestions": [quest_payloads[code] for code in selection.suggestion_codes if code in quest_payloads],
+        }
+
+    @staticmethod
+    def mission_payload(row):
+        return {
+            "id": row.id, "code": row.mission.code, "title": row.mission.title,
+            "description": row.mission.description, "mission_type": row.mission.mission_type,
+            "current_progress": row.current_progress, "target_value": row.mission.target_value,
+            "reward_xp": row.mission.reward_xp, "status": row.status,
+            "reward_claimed": row.reward_claimed, "start_at": row.start_at, "end_at": row.end_at,
+            "categories": (row.mission.category_filter or {}).get("categories", []),
+        }
+
+    def activities_overview(self, user_id):
+        """Build the tab with one request, one user lock and one final commit."""
+        self.seed_catalog()
+        self.get_progression(user_id)
+        self._lock_user(user_id)
+        self._ensure_missions(user_id, "daily")
+        self._ensure_missions(user_id, "weekly")
+        missions = self._refresh_missions(user_id)
+        quests = self.db.query(Quest).filter_by(is_active=True).order_by(Quest.code).all()
+        payloads = self._quest_payloads(quests, user_id)
+        result = {
+            "progress": self.progression_payload(user_id),
+            "quests": payloads,
+            "daily": [self.mission_payload(row) for row in missions["daily"]],
+            "weekly": [self.mission_payload(row) for row in missions["weekly"]],
+            "achievements": self._achievement_payloads(user_id),
+            "discovery": self._discovery_payload(user_id, {item["code"]: item for item in payloads}),
         }
         self.db.commit()
         return result
@@ -194,7 +251,7 @@ class ProgressionService:
         if search:
             query = query.filter(Quest.title.ilike(f"%{search}%"))
         quests = query.order_by(Quest.code).all()
-        payloads = [self._quest_payload(quest, user_id) for quest in quests]
+        payloads = self._quest_payloads(quests, user_id)
         return [item for item in payloads if item["is_favorite"]] if favorites else payloads
 
     def get_quest(self, user_id: uuid.UUID, code: str) -> dict:
@@ -382,15 +439,17 @@ class ProgressionService:
             self.db.flush()
 
     def _refresh_missions(self, user_id, only_kind=None):
+        result = {}
         for kind in ([only_kind] if only_kind else ["daily", "weekly"]):
             if not kind:
                 continue
             key, start, end = self._period(user_id, kind)
-            rows = self.db.query(UserMission).join(MissionDefinition).filter(
+            rows = self.db.query(UserMission).options(joinedload(UserMission.mission)).join(MissionDefinition).filter(
                 UserMission.user_id == user_id, UserMission.period_key == key,
                 MissionDefinition.mission_type == kind,
             ).all()
-            completions = self.db.query(UserQuestInstance).join(Quest).filter(
+            result[kind] = rows
+            completions = self.db.query(UserQuestInstance).options(joinedload(UserQuestInstance.quest)).join(Quest).filter(
                 UserQuestInstance.user_id == user_id, UserQuestInstance.status == "completed",
                 UserQuestInstance.completed_at >= start, UserQuestInstance.completed_at < end,
             ).all()
@@ -415,6 +474,7 @@ class ProgressionService:
                 if row.current_progress >= row.mission.target_value and not row.reward_claimed:
                     row.status = "complete"
         self.db.flush()
+        return result
 
     def claim_mission(self, user_id, assignment_id):
         self.get_progression(user_id)
@@ -453,11 +513,20 @@ class ProgressionService:
 
     def list_achievements(self, user_id):
         self.seed_catalog()
+        return self._achievement_payloads(user_id)
+
+    def _achievement_payloads(self, user_id):
+        unlocked_by_id = {row.achievement_id: row for row in self.db.query(UserAchievement).filter_by(user_id=user_id).all()}
+        category_counts = dict(self.db.query(Quest.category, func.count(UserQuestInstance.id)).join(
+            UserQuestInstance, UserQuestInstance.quest_id == Quest.id,
+        ).filter(UserQuestInstance.user_id == user_id, UserQuestInstance.status == "completed").group_by(Quest.category).all())
+        total = sum(category_counts.values())
         result = []
         for item in self.db.query(AchievementDefinition).order_by(AchievementDefinition.code).all():
-            unlocked = self.db.query(UserAchievement).filter_by(user_id=user_id, achievement_id=item.id).first()
+            unlocked = unlocked_by_id.get(item.id)
+            current = category_counts.get(item.category_filter, 0) if item.category_filter else total
             result.append({"code": item.code, "name": item.name, "description": item.description,
-                           "current_progress": min(self._achievement_progress(user_id, item), item.target_value),
+                           "current_progress": min(current, item.target_value),
                            "target_value": item.target_value, "reward_xp": item.reward_xp,
                            "unlocked": unlocked is not None, "unlocked_at": unlocked.unlocked_at if unlocked else None})
         return result
