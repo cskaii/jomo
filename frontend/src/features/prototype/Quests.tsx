@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Activities from "./Activities";
 import {
@@ -8,7 +8,7 @@ import {
   Leaf, Search, Sparkles, Star, Trophy, Users, X,
 } from "lucide-react";
 import {
-  achievement, dailyDiscovery, progressMission, progression, quest, questCompletion, questInstance,
+  activitiesOverview, progressMission, quest, questCompletion, questInstance,
   request, success, z,
 } from "@/services/prototype";
 import { Feedback, ResourceState, useAction, useResource, useVisibleRefresh } from "./ui";
@@ -24,20 +24,12 @@ const categories = [
   ["community_kindness", "Kindness", Heart],
 ] as const;
 
+function loadOverview() {
+  return request(activitiesOverview, "/progression/activities");
+}
+
 export default function Quests() {
-  const load = useCallback(async () => {
-    // Finish first-time onboarding before parallel assignment requests.
-    const progress = await request(progression, "/progression");
-    const [quests, daily, weekly, achievements, discovery] = await Promise.all([
-      request(quest.array(), "/quests"),
-      request(progressMission.array(), "/missions/daily"),
-      request(progressMission.array(), "/missions/weekly"),
-      request(achievement.array(), "/achievements"),
-      request(dailyDiscovery, "/quests/discovery"),
-    ]);
-    return { progress, quests, daily, weekly, achievements, discovery };
-  }, []);
-  const view = useResource(load);
+  const view = useResource(loadOverview, "activities-overview");
   useVisibleRefresh(view.refresh, 60000);
   const refreshAt = view.data?.discovery.refresh_at;
   useEffect(() => {

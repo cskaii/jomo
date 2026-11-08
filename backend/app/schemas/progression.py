@@ -100,6 +100,15 @@ class AchievementResponse(BaseModel):
     unlocked_at: Optional[datetime] = None
 
 
+class ActivitiesOverviewResponse(BaseModel):
+    progress: ProgressionResponse
+    quests: list[QuestResponse]
+    daily: list[MissionResponse]
+    weekly: list[MissionResponse]
+    achievements: list[AchievementResponse]
+    discovery: DailyDiscoveryResponse
+
+
 class XpTransactionResponse(BaseModel):
     id: UUID
     amount: int

@@ -6,13 +6,19 @@ from fastapi import APIRouter, Query, Request
 from app.api.dependencies import CurrentUser, DbSession
 from app.schemas.common import ResponseEnvelope, SuccessStatus
 from app.schemas.progression import (
-    AchievementResponse, DailyDiscoveryResponse, MissionResponse, ProgressionResponse, QuestCompleteRequest,
+    AchievementResponse, ActivitiesOverviewResponse, DailyDiscoveryResponse, MissionResponse, ProgressionResponse, QuestCompleteRequest,
     QuestCompletionResponse, QuestInstanceResponse, QuestResponse, XpTransactionResponse,
 )
 from app.services.progression_service import ProgressionService
 from app.utils.response import wrap_response
 
 router = APIRouter(tags=["Progression & Quests"])
+
+
+@router.get("/progression/activities", response_model=ResponseEnvelope[ActivitiesOverviewResponse])
+def activities_overview(request: Request, current_user: CurrentUser, db: DbSession):
+    # Synchronous SQLAlchemy work belongs in FastAPI's thread pool, not its event loop.
+    return wrap_response(ProgressionService(db).activities_overview(current_user.id), request)
 
 
 @router.get("/progression", response_model=ResponseEnvelope[ProgressionResponse])

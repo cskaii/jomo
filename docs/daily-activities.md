@@ -1,5 +1,13 @@
 # Daily activities
 
+The Activities tab loads its progression, library, missions, achievements and
+discovery through `GET /api/v1/progression/activities`. This synchronous route
+runs database work in FastAPI's thread pool, batches per-user card state and
+achievement counts, and commits its assignment changes together. Discovery
+reuses the library's card payloads. The frontend uses an account-scoped stable
+cache key so returning to the tab shows cached data while refreshing. Deploy the
+backend route before the updated frontend; this optimisation requires no new SQL.
+
 `GET /api/v1/quests/discovery` returns three daily quests and three additional
 suggested activities, the user's timezone, and the next local midnight in UTC.
 Selections are persisted per user and local date, so reloads and other devices
