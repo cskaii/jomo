@@ -94,18 +94,19 @@ export function ActivityEvidence({ activityId, item, changed }: {
         await request(proof, `/activities/${activityId}/proofs`, "post", { proof_type: "group_confirmation" }); refresh();
       }, "Group confirmation requested. Eligible participants have been notified.")}>Request group confirmation</button>}
       {view.data?.mine && <div className="j-panel"><strong>Your evidence: {view.data.mine.status}</strong><p>Submitted {dateTime(view.data.mine.submitted_at)}.</p>
-        {view.data.mine.proof_type === "photo" && <button disabled={action.pending} onClick={() => showPhoto(view.data!.mine!.id)}>Preview photo</button>}
-        <button disabled={action.pending} onClick={() => {
+        <div className="j-row">
+        {view.data.mine.proof_type === "photo" && <button type="button" className="j-button secondary" disabled={action.pending} onClick={() => showPhoto(view.data!.mine!.id)}>Preview photo</button>}
+        <button type="button" className="j-button danger" disabled={action.pending} onClick={() => {
           if (!window.confirm("Remove this evidence? Photo deletion is queued; recorded rewards are not duplicated or refunded.")) return;
           void action.run(async () => { await request(success, `/proofs/${view.data!.mine!.id}`, "delete"); setPreview(null); refresh(); }, "Evidence removed; any private photo is queued for deletion.");
-        }}>Remove my evidence</button></div>}
+        }}>Remove my evidence</button></div></div>}
       {!!view.data?.review.length && <h3>Evidence awaiting your review</h3>}
       {view.data?.review.map(entry => <div className="j-panel" key={entry.id}><strong>{entry.proof_type === "photo" ? "Photo evidence" : "Group confirmation request"}</strong><p>Submitted {dateTime(entry.submitted_at)}.</p>
         {entry.proof_type === "photo" && <button disabled={action.pending} onClick={() => showPhoto(entry.id)}>View private photo</button>}
         {["confirm", "reject"].map(decision => <button disabled={action.pending} key={decision} onClick={() => void action.run(async () => {
           await request(success, `/proofs/${entry.id}/confirm`, "post", { decision }); setPreview(null); refresh();
         }, decision === "confirm" ? "Evidence approved. Any eligible reward was awarded once." : "Evidence declined. The participant can resubmit.")}>{decision === "confirm" ? "Approve" : "Decline"}</button>)}</div>)}
-      {preview && <div><Image src={preview.url} alt="Private activity evidence" width={480} height={320} unoptimized referrerPolicy="no-referrer" className="j-proof-image" /><p>Preview access expires shortly. Do not share the link.</p><button onClick={() => setPreview(null)}>Close preview</button></div>}
+      {preview && <div><Image src={preview.url} alt="Private activity evidence" width={480} height={320} unoptimized referrerPolicy="no-referrer" className="j-proof-image" /><p>Preview access expires shortly. Do not share the link.</p><button type="button" className="j-button secondary" onClick={() => setPreview(null)}>Close preview</button></div>}
       <Feedback action={action} />
     </Panel>
   </>;
