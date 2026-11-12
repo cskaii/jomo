@@ -16,7 +16,7 @@ const hooksOwnedRules = Object.fromEntries(
 
 const eslintConfig = defineConfig([
   globalIgnores([
-    ".next*/**", "out/**", "build/**", ".pnpm-store/**", "next-env.d.ts",
+    ".next*/**", ".cache/**", "out/**", "build/**", ".pnpm-store/**", "next-env.d.ts",
   ]),
   {
     files: ["**/*.{js,mjs,cjs,jsx,ts,tsx}"],

@@ -9,16 +9,17 @@ const { PGlite } = require(path.join(root, 'frontend/.next-prototype-qa/node_mod
 async function main() {
   const db = new PGlite();
   try {
-    await db.exec('CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
+    await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
     const schema = fs.readFileSync(path.join(root, 'supabase/schema.sql'), 'utf8');
     const fresh = new PGlite();
     try {
-      await fresh.exec('CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
+      await fresh.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
       await fresh.exec(schema);
       const tables = (await fresh.query("SELECT count(*) AS n FROM pg_tables WHERE schemaname='public'")).rows[0];
-      assert.equal(Number(tables.n), 33);
-      assert.equal(Number((await fresh.query("SELECT count(*) AS n FROM pg_tables WHERE schemaname='public' AND rowsecurity")).rows[0].n), 33);
-      console.log('PASS: Full fresh schema creates 32 application tables plus bookkeeping, with RLS.');
+      assert.equal(Number(tables.n), 34);
+      assert.equal(Number((await fresh.query("SELECT count(*) AS n FROM pg_tables WHERE schemaname='public' AND rowsecurity")).rows[0].n), 34);
+      assert.equal((await fresh.query('SELECT version_num FROM public.alembic_version')).rows[0].version_num, 'e21b9d73a401');
+      console.log('PASS: Full fresh schema creates 33 application tables plus bookkeeping, with RLS, at the daily-activity revision.');
     } finally { await fresh.close(); }
     const marker = schema.indexOf('-- Running upgrade c8e31a04d912 -> d91e7c20b403');
     assert.ok(marker > 0);
@@ -69,7 +70,7 @@ async function main() {
     await assert.rejects(insert('public.users', { id: owner, username: 'stale', display_name: 'Stale request', created_at: now, updated_at: now }));
     console.log('PASS: Owner deletion transfers group ownership, preserves shared assets/balance, anonymises ledger and queues the private photo.');
     console.log('PASS: Deleted Auth identity cannot be recreated by an in-flight stale profile write.');
-    await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA storage;
+    await db.exec(`CREATE SCHEMA storage;
       CREATE TABLE storage.buckets(id text PRIMARY KEY, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
       CREATE TABLE storage.objects(bucket_id text, name text); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
       GRANT USAGE ON SCHEMA storage TO anon, authenticated; GRANT SELECT, INSERT ON storage.objects TO anon, authenticated;
